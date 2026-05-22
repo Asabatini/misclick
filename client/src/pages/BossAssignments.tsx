@@ -36,7 +36,7 @@ export default function BossAssignments() {
       ]);
       setMembers(membersRes.data);
       setAssignments(assignmentsRes.data);
-      updateAvailableMembers(membersRes.data, assignmentsRes.data);
+      updateAvailableMembers(membersRes.data);
     } catch (err) {
       console.error('Failed to load boss assignments', err);
     } finally {
@@ -44,7 +44,7 @@ export default function BossAssignments() {
     }
   };
 
-  const updateAvailableMembers = (allMembers: Member[], currentAssignments: BossRoster) => {
+  const updateAvailableMembers = (allMembers: Member[]) => {
     // Keep all members available to allow multiple assignments
     setAvailableMembers(allMembers);
   };
@@ -135,7 +135,7 @@ export default function BossAssignments() {
           boss_name: bossName,
           member_id: member.member_id,
           position: index,
-          role: member.role, // Include the role (tank/healer/dps/bench)
+          role: member.role || 'dps', // Include the role (tank/healer/dps/bench) with default
         }))
       );
 
