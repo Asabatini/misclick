@@ -55,7 +55,6 @@ export default function Roster() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
 
     if (!over) return;
 
