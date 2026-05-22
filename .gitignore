@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+client/node_modules/
+
+# Build outputs
+dist/
+client/dist/
+
+# Environment variables
+.env
+.env.local
+
+# Database
+data/
+*.db
+*.db-journal
+
+# Logs
+logs/
+*.log
+combined.log
+error.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
