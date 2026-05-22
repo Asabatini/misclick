@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Save, ChevronLeft, ChevronRight, Copy, Clock } from 'lucide-react';
+import { Save, ChevronLeft, ChevronRight, Copy, Clock, RefreshCw } from 'lucide-react';
 import { bossAssignmentsAPI, membersAPI } from '@/lib/api';
 import { getWeekStart, getWeekEnd, MYTHIC_BOSSES, getClassColor } from '@/lib/utils';
 import type { Member, BossRoster } from '@/types';
@@ -13,6 +13,7 @@ export default function BossAssignments() {
   const [assignments, setAssignments] = useState<BossRoster>({});
   const [availableMembers, setAvailableMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -147,6 +148,20 @@ export default function BossAssignments() {
     }
   };
 
+  const syncRoster = async () => {
+    try {
+      setSyncing(true);
+      await membersAPI.sync();
+      await loadData();
+      alert('Roster synced successfully from Blizzard!');
+    } catch (err) {
+      alert('Failed to sync roster from Blizzard API');
+      console.error(err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const clearBossRoster = async (bossName: string) => {
     if (!confirm(`Clear all assignments for ${bossName}?`)) {
       return;
@@ -256,10 +271,20 @@ export default function BossAssignments() {
                 <ChevronRight size={20} />
               </button>
             </div>
-            <button onClick={saveAssignments} className="btn btn-primary flex items-center gap-2">
-              <Save size={18} />
-              Save Roster
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={syncRoster} 
+                disabled={syncing}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Syncing...' : 'Sync Roster'}
+              </button>
+              <button onClick={saveAssignments} className="btn btn-primary flex items-center gap-2">
+                <Save size={18} />
+                Save Roster
+              </button>
+            </div>
           </div>
         </div>
 
