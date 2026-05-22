@@ -408,7 +408,7 @@ function BossCard({
   const dpsAssignments = assignments.filter(a => a.role === 'dps');
   const benchAssignments = assignments.filter(a => a.role === 'bench');
   
-  const RoleSection = ({ role, count, assignments, colorClass }: any) => {
+  const RoleSection = ({ role, assignments, colorClass }: any) => {
     const dropId = `boss-${boss.name}-role-${role}`;
     const { setNodeRef, isOver } = useDroppable({
       id: dropId,

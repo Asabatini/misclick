@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core';
-import { RefreshCw, Plus, Edit2, Trash2, Users } from 'lucide-react';
+import { RefreshCw, Plus, Users } from 'lucide-react';
 import { membersAPI } from '@/lib/api';
 import { getClassColor } from '@/lib/utils';
 import type { Member } from '@/types';
@@ -12,7 +12,6 @@ export default function Roster() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -52,22 +51,6 @@ export default function Roster() {
     } finally {
       setSyncing(false);
     }
-  };
-
-  const deleteMember = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this member?')) return;
-    
-    try {
-      await membersAPI.delete(id);
-      await loadMembers();
-    } catch (err) {
-      alert('Failed to delete member');
-      console.error(err);
-    }
-  };
-
-  const handleDragStart = (event: any) => {
-    setActiveId(event.active.id);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -116,7 +99,6 @@ export default function Roster() {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-6">
