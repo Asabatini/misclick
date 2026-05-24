@@ -142,3 +142,38 @@ export async function fetchCharacterEquipment(realm: string, characterName: stri
     return null;
   }
 }
+
+export async function fetchGuildActivity() {
+  const token = await getBlizzardAccessToken();
+  const region = process.env.BLIZZARD_REGION || 'us';
+  const realm = process.env.WOW_REALM;
+  const guildName = process.env.WOW_GUILD_NAME;
+
+  if (!realm || !guildName) {
+    throw new Error('Guild configuration not set');
+  }
+
+  const realmSlug = realm.toLowerCase().replace(/\s+/g, '-');
+  const guildSlug = guildName.toLowerCase().replace(/\s+/g, '-');
+
+  try {
+    const response = await axios.get(
+      `https://${region}.api.blizzard.com/data/wow/guild/${realmSlug}/${guildSlug}/activity`,
+      {
+        params: {
+          namespace: `profile-${region}`,
+          locale: 'en_US',
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    logger.info(`Fetched guild activity for ${guildName}`);
+    return response.data;
+  } catch (error) {
+    logger.error('Failed to fetch guild activity', error);
+    throw error;
+  }
+}

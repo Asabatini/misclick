@@ -1,5 +1,6 @@
 import express from 'express';
 import db from '../db/database';
+import { fetchGuildActivity } from '../services/blizzard';
 import logger from '../utils/logger';
 
 const router = express.Router();
@@ -100,6 +101,57 @@ router.delete('/:id', (req, res) => {
   } catch (error) {
     logger.error('Error deleting boss kill:', error);
     res.status(500).json({ error: 'Failed to delete boss kill' });
+  }
+});
+
+// Sync boss kills from Blizzard API
+router.post('/sync', async (req, res) => {
+  try {
+    const activityData = await fetchGuildActivity();
+    
+    if (!activityData.activities || activityData.activities.length === 0) {
+      return res.json({ message: 'No recent activity found', count: 0 });
+    }
+
+    // Filter for encounter completion activities (boss kills)
+    const encounterKills = activityData.activities.filter(
+      (activity: any) => activity.activity?.type === 'encounter_victory'
+    );
+
+    if (encounterKills.length === 0) {
+      return res.json({ message: 'No boss kills found in recent activity', count: 0 });
+    }
+
+    let synced = 0;
+    const stmt = db.prepare(
+      'INSERT OR REPLACE INTO boss_kills (boss_name, kill_date) VALUES (?, ?)'
+    );
+
+    for (const activity of encounterKills) {
+      const bossName = activity.activity?.encounter?.name;
+      const killTimestamp = activity.timestamp;
+      
+      if (bossName && killTimestamp) {
+        // Convert timestamp to date
+        const killDate = new Date(killTimestamp).toISOString().split('T')[0];
+        
+        try {
+          stmt.run(bossName, killDate);
+          synced++;
+        } catch (error: any) {
+          // Ignore duplicate entries
+          if (!error.message?.includes('UNIQUE')) {
+            logger.warn(`Failed to insert boss kill for ${bossName}:`, error);
+          }
+        }
+      }
+    }
+
+    logger.info(`Synced ${synced} boss kills from Blizzard API`);
+    res.json({ message: `Successfully synced ${synced} boss kills`, count: synced });
+  } catch (error) {
+    logger.error('Error syncing boss kills', error);
+    res.status(500).json({ error: 'Failed to sync boss kills from Blizzard API' });
   }
 });
 

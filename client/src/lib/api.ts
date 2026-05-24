@@ -77,6 +77,7 @@ export const bossKillsAPI = {
     api.post<BossKill>('/boss-kills', data),
   update: (id: number, data: Partial<BossKill>) => api.put<BossKill>(`/boss-kills/${id}`, data),
   delete: (id: number) => api.delete(`/boss-kills/${id}`),
+  sync: () => api.post<{ message: string; count: number }>('/boss-kills/sync'),
 };
 
 export default api;
