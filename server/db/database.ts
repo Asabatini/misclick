@@ -2,13 +2,17 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const dbPath = process.env.DATABASE_PATH || './data/guild.db';
+// Use persistent disk on Render, local path for development
+const defaultPath = process.env.RENDER ? '/data/guild.db' : './data/guild.db';
+const dbPath = process.env.DATABASE_PATH || defaultPath;
 const dbDir = path.dirname(dbPath);
 
 // Ensure data directory exists
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
+
+console.log(`📁 Using database at: ${dbPath}`);
 
 const db = new Database(dbPath);
 
