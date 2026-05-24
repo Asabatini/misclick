@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Calendar, Swords, RefreshCw } from 'lucide-react';
-import { MYTHIC_BOSSES, getClassColor } from '@/lib/utils';
+import { MYTHIC_BOSSES } from '@/lib/utils';
 import { bossKillsAPI } from '@/lib/api';
 
 interface BossKill {
