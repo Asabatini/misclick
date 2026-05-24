@@ -113,9 +113,9 @@ router.post('/sync', async (req, res) => {
       return res.json({ message: 'No raid encounter data found', count: 0 });
     }
 
-    const encounters = guildData.raid_encounters['tier-mn-1']?.mythic?.encounters || [];
+    const encounters = guildData.raid_encounters;
     
-    if (encounters.length === 0) {
+    if (!Array.isArray(encounters) || encounters.length === 0) {
       return res.json({ message: 'No boss kills found', count: 0 });
     }
 
@@ -126,11 +126,9 @@ router.post('/sync', async (req, res) => {
 
     for (const encounter of encounters) {
       // Only sync bosses that have been defeated
-      if (encounter.last_defeated_at) {
+      if (encounter.defeatedAt) {
         const bossName = encounter.name;
-        // Use first kill date if available, otherwise last kill date
-        const killTimestamp = encounter.first_defeated_at || encounter.last_defeated_at;
-        const killDate = new Date(killTimestamp).toISOString().split('T')[0];
+        const killDate = new Date(encounter.defeatedAt).toISOString().split('T')[0];
         
         try {
           stmt.run(bossName, killDate);
