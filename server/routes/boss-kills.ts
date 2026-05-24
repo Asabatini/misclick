@@ -1,6 +1,6 @@
 import express from 'express';
 import db from '../db/database';
-import { fetchGuildActivity } from '../services/blizzard';
+import { fetchRaiderIOGuildBossKills } from '../services/blizzard';
 import logger from '../utils/logger';
 
 const router = express.Router();
@@ -104,22 +104,19 @@ router.delete('/:id', (req, res) => {
   }
 });
 
-// Sync boss kills from Blizzard API
+// Sync boss kills from Raider.IO API
 router.post('/sync', async (req, res) => {
   try {
-    const activityData = await fetchGuildActivity();
+    const guildData = await fetchRaiderIOGuildBossKills();
     
-    if (!activityData.activities || activityData.activities.length === 0) {
-      return res.json({ message: 'No recent activity found', count: 0 });
+    if (!guildData || !guildData.raid_encounters) {
+      return res.json({ message: 'No raid encounter data found', count: 0 });
     }
 
-    // Filter for encounter completion activities (boss kills)
-    const encounterKills = activityData.activities.filter(
-      (activity: any) => activity.activity?.type === 'encounter_victory'
-    );
-
-    if (encounterKills.length === 0) {
-      return res.json({ message: 'No boss kills found in recent activity', count: 0 });
+    const encounters = guildData.raid_encounters['tier-mn-1']?.mythic?.encounters || [];
+    
+    if (encounters.length === 0) {
+      return res.json({ message: 'No boss kills found', count: 0 });
     }
 
     let synced = 0;
@@ -127,17 +124,18 @@ router.post('/sync', async (req, res) => {
       'INSERT OR REPLACE INTO boss_kills (boss_name, kill_date) VALUES (?, ?)'
     );
 
-    for (const activity of encounterKills) {
-      const bossName = activity.activity?.encounter?.name;
-      const killTimestamp = activity.timestamp;
-      
-      if (bossName && killTimestamp) {
-        // Convert timestamp to date
+    for (const encounter of encounters) {
+      // Only sync bosses that have been defeated
+      if (encounter.last_defeated_at) {
+        const bossName = encounter.name;
+        // Use first kill date if available, otherwise last kill date
+        const killTimestamp = encounter.first_defeated_at || encounter.last_defeated_at;
         const killDate = new Date(killTimestamp).toISOString().split('T')[0];
         
         try {
           stmt.run(bossName, killDate);
           synced++;
+          logger.info(`Synced boss kill: ${bossName} on ${killDate}`);
         } catch (error: any) {
           // Ignore duplicate entries
           if (!error.message?.includes('UNIQUE')) {
@@ -147,11 +145,11 @@ router.post('/sync', async (req, res) => {
       }
     }
 
-    logger.info(`Synced ${synced} boss kills from Blizzard API`);
+    logger.info(`Synced ${synced} boss kills from Raider.IO`);
     res.json({ message: `Successfully synced ${synced} boss kills`, count: synced });
   } catch (error) {
     logger.error('Error syncing boss kills', error);
-    res.status(500).json({ error: 'Failed to sync boss kills from Blizzard API' });
+    res.status(500).json({ error: 'Failed to sync boss kills from Raider.IO' });
   }
 });
 

@@ -143,8 +143,8 @@ export async function fetchCharacterEquipment(realm: string, characterName: stri
   }
 }
 
-export async function fetchGuildActivity() {
-  const token = await getBlizzardAccessToken();
+// Raider.IO API for guild progression
+export async function fetchRaiderIOGuildBossKills() {
   const region = process.env.BLIZZARD_REGION || 'us';
   const realm = process.env.WOW_REALM;
   const guildName = process.env.WOW_GUILD_NAME;
@@ -154,26 +154,30 @@ export async function fetchGuildActivity() {
   }
 
   const realmSlug = realm.toLowerCase().replace(/\s+/g, '-');
-  const guildSlug = guildName.toLowerCase().replace(/\s+/g, '-');
+  const guildSlug = encodeURIComponent(guildName);
 
   try {
+    // Fetch guild profile with raid encounters for tier-mn-1 (Midnight Season 1) on mythic difficulty
     const response = await axios.get(
-      `https://${region}.api.blizzard.com/data/wow/guild/${realmSlug}/${guildSlug}/activity`,
+      'https://raider.io/api/v1/guilds/profile',
       {
         params: {
-          namespace: `profile-${region}`,
-          locale: 'en_US',
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+          region: region,
+          realm: realmSlug,
+          name: guildName,
+          fields: 'raid_encounters:tier-mn-1:mythic'
+        }
       }
     );
 
-    logger.info(`Fetched guild activity for ${guildName}`);
+    logger.info(`Fetched Raider.IO boss kills for ${guildName}`);
     return response.data;
-  } catch (error) {
-    logger.error('Failed to fetch guild activity', error);
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      logger.warn(`Guild ${guildName} not found on Raider.IO`);
+      return null;
+    }
+    logger.error('Failed to fetch Raider.IO guild data', error);
     throw error;
   }
 }
