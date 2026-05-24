@@ -135,9 +135,6 @@ export default function Home() {
                       <span className="text-gray-500 font-bold">#{index + 1}</span>
                       <h3 className="font-bold">{boss.name}</h3>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      {boss.tanks}T • {boss.healers}H • {boss.dps}D
-                    </div>
                   </div>
                   {isKilled && (
                     <Trophy className="text-yellow-500 flex-shrink-0" size={24} />
