@@ -158,6 +158,17 @@ export function initializeDatabase() {
     )
   `);
 
+  // Boss kills table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS boss_kills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      boss_name TEXT NOT NULL UNIQUE,
+      kill_date DATE NOT NULL,
+      screenshot_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   console.log('Database initialized successfully');
 }
 

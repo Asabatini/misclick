@@ -61,4 +61,22 @@ export const fightPreferencesAPI = {
   delete: (id: number) => api.delete(`/fight-preferences/${id}`),
 };
 
+// Boss Kills API
+interface BossKill {
+  id: number;
+  boss_name: string;
+  kill_date: string;
+  screenshot_url?: string;
+  created_at: string;
+}
+
+export const bossKillsAPI = {
+  getAll: () => api.get<BossKill[]>('/boss-kills'),
+  getOne: (id: number) => api.get<BossKill>(`/boss-kills/${id}`),
+  create: (data: { boss_name: string; kill_date: string; screenshot_url?: string }) => 
+    api.post<BossKill>('/boss-kills', data),
+  update: (id: number, data: Partial<BossKill>) => api.put<BossKill>(`/boss-kills/${id}`, data),
+  delete: (id: number) => api.delete(`/boss-kills/${id}`),
+};
+
 export default api;
