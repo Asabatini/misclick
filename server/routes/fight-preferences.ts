@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import logger from '../utils/logger';
+import { authenticateToken, canAddAbsencesPreferences, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -52,8 +53,8 @@ router.get('/boss/:bossName', (req: Request, res: Response) => {
   }
 });
 
-// Create fight preference
-router.post('/', (req: Request, res: Response) => {
+// Create fight preference - Requires login (Raider/Member/Officer/Admin)
+router.post('/', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   const { member_id, boss_name, reason, priority } = req.body;
 
   if (!member_id || !boss_name || !reason) {
@@ -79,8 +80,8 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
-// Update fight preference
-router.put('/:id', (req: Request, res: Response) => {
+// Update fight preference - Requires login (Raider/Member/Officer/Admin)
+router.put('/:id', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   const { boss_name, reason, priority } = req.body;
 
   try {
@@ -102,8 +103,8 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-// Delete fight preference
-router.delete('/:id', (req: Request, res: Response) => {
+// Delete fight preference - Requires login (Raider/Member/Officer/Admin)
+router.delete('/:id', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   try {
     const stmt = db.prepare('DELETE FROM fight_preferences WHERE id = ?');
     stmt.run(req.params.id);

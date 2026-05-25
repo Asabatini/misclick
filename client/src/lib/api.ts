@@ -8,7 +8,65 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with requests
 });
+
+// Add token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth API
+export interface User {
+  id: number;
+  username: string;
+  role: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  id: number;
+  username: string;
+  role: string;
+  token: string;
+}
+
+export const authAPI = {
+  register: (data: RegisterRequest) => api.post<AuthResponse>('/auth/register', data),
+  login: (data: LoginRequest) => api.post<AuthResponse>('/auth/login', data),
+  logout: () => api.post('/auth/logout'),
+  getCurrentUser: () => api.get<User>('/auth/me'),
+};
+
+// Users API (Admin only)
+export interface UserManagement {
+  id: number;
+  username: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const usersAPI = {
+  getAll: () => api.get<UserManagement[]>('/users'),
+  getOne: (id: number) => api.get<UserManagement>(`/users/${id}`),
+  updateRole: (id: number, role: string) => api.put(`/users/${id}/role`, { role }),
+  resetPassword: (id: number, newPassword: string) => api.put(`/users/${id}/reset-password`, { newPassword }),
+  delete: (id: number) => api.delete(`/users/${id}`),
+};
 
 // Members API
 export const membersAPI = {

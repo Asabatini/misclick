@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import logger from '../utils/logger';
+import { authenticateToken, canAddAbsencesPreferences, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -58,8 +59,8 @@ router.get('/range', (req: Request, res: Response) => {
   }
 });
 
-// Create absence
-router.post('/', (req: Request, res: Response) => {
+// Create absence - Requires login (Raider/Member/Officer/Admin)
+router.post('/', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   const { member_id, start_date, end_date, reason } = req.body;
 
   if (!member_id || !start_date || !end_date) {
@@ -85,8 +86,8 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
-// Update absence
-router.put('/:id', (req: Request, res: Response) => {
+// Update absence - Requires login (Raider/Member/Officer/Admin)
+router.put('/:id', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   const { member_id, start_date, end_date, reason } = req.body;
 
   try {
@@ -108,8 +109,8 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-// Delete absence
-router.delete('/:id', (req: Request, res: Response) => {
+// Delete absence - Requires login (Raider/Member/Officer/Admin)
+router.delete('/:id', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   try {
     const stmt = db.prepare('DELETE FROM absences WHERE id = ?');
     stmt.run(req.params.id);

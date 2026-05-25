@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Calendar, Swords, RefreshCw } from 'lucide-react';
+import { Trophy, Calendar, Swords } from 'lucide-react';
 import { MYTHIC_BOSSES } from '@/lib/utils';
 import { bossKillsAPI } from '@/lib/api';
 
@@ -14,8 +14,6 @@ interface BossKill {
 export default function Home() {
   const [bossKills, setBossKills] = useState<BossKill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState('');
 
   useEffect(() => {
     loadBossKills();
@@ -30,22 +28,6 @@ export default function Home() {
       console.error('Failed to load boss kills', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const syncBossKills = async () => {
-    try {
-      setSyncing(true);
-      setSyncMessage('');
-      const response = await bossKillsAPI.sync();
-      setSyncMessage(response.data.message);
-      await loadBossKills(); // Reload after sync
-      setTimeout(() => setSyncMessage(''), 5000); // Clear message after 5s
-    } catch (err: any) {
-      console.error('Failed to sync boss kills', err);
-      setSyncMessage(err.response?.data?.error || 'Failed to sync boss kills');
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -64,21 +46,6 @@ export default function Home() {
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold">Misclick Guild</h1>
         <p className="text-xl text-gray-400">Sargeras-US • Mythic Progression</p>
-        
-        {/* Sync Button */}
-        <div className="flex flex-col items-center gap-2">
-          <button
-            onClick={syncBossKills}
-            disabled={syncing}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Syncing...' : 'Sync Boss Kills from Blizzard'}
-          </button>
-          {syncMessage && (
-            <p className="text-sm text-green-400">{syncMessage}</p>
-          )}
-        </div>
       </div>
 
       {/* Progression Summary */}
@@ -88,7 +55,7 @@ export default function Home() {
             <Trophy className="text-yellow-500" size={32} />
             <div>
               <h2 className="text-2xl font-bold">Current Progression</h2>
-              <p className="text-gray-400">Midnight Rising Mythic</p>
+              <p className="text-gray-400">Midnight Mythic</p>
             </div>
           </div>
           <div className="text-right">

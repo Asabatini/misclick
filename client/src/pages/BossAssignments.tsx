@@ -3,11 +3,13 @@ import { DndContext, DragEndEvent, DragOverlay, closestCenter, PointerSensor, us
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Save, ChevronLeft, ChevronRight, Copy, Clock, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { bossAssignmentsAPI, membersAPI } from '@/lib/api';
 import { getWeekStart, getWeekEnd, MYTHIC_BOSSES, getClassColor } from '@/lib/utils';
 import type { Member, BossRoster } from '@/types';
 
 export default function BossAssignments() {
+  const { canEditBossAssignments } = useAuth();
   const [currentWeek, setCurrentWeek] = useState(getWeekStart());
   const [members, setMembers] = useState<Member[]>([]);
   const [assignments, setAssignments] = useState<BossRoster>({});
@@ -271,27 +273,29 @@ export default function BossAssignments() {
                 <ChevronRight size={20} />
               </button>
             </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={syncRoster} 
-                disabled={syncing}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-                {syncing ? 'Syncing...' : 'Sync Roster'}
-              </button>
-              <button onClick={saveAssignments} className="btn btn-primary flex items-center gap-2">
-                <Save size={18} />
-                Save Roster
-              </button>
-            </div>
+            {canEditBossAssignments && (
+              <div className="flex gap-2">
+                <button 
+                  onClick={syncRoster} 
+                  disabled={syncing}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+                  {syncing ? 'Syncing...' : 'Sync Roster'}
+                </button>
+                <button onClick={saveAssignments} className="btn btn-primary flex items-center gap-2">
+                  <Save size={18} />
+                  Save Roster
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Available Members */}
           <div className="lg:col-span-1">
-            <AvailableMembersSection members={availableMembers} />
+            <AvailableMembersSection members={availableMembers} canEdit={canEditBossAssignments} />
           </div>
 
           {/* Boss Assignments */}
@@ -307,6 +311,7 @@ export default function BossAssignments() {
                   onClear={() => clearBossRoster(boss.name)}
                   onCopyFrom={(fromBoss) => copyBossRoster(fromBoss, boss.name)}
                   onCopyFromLastWeek={() => copyFromLastWeek(boss.name)}
+                  canEdit={canEditBossAssignments}
                 />
               ))}
             </div>
@@ -330,7 +335,7 @@ export default function BossAssignments() {
   );
 }
 
-function AvailableMembersSection({ members }: { members: Member[] }) {
+function AvailableMembersSection({ members, canEdit = false }: { members: Member[]; canEdit?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('');
   const { setNodeRef, isOver } = useDroppable({
     id: 'available',
@@ -364,7 +369,7 @@ function AvailableMembersSection({ members }: { members: Member[] }) {
       >
         <SortableContext items={filteredMembers.map(m => `member-${m.id}`)} strategy={verticalListSortingStrategy}>
           {filteredMembers.map(member => (
-            <DraggableMember key={member.id} member={member} />
+            <DraggableMember key={member.id} member={member} canEdit={canEdit} />
           ))}
         </SortableContext>
         {filteredMembers.length === 0 && members.length > 0 && (
@@ -378,15 +383,17 @@ function AvailableMembersSection({ members }: { members: Member[] }) {
   );
 }
 
-function DraggableMember({ member }: { member: Member }) {
+function DraggableMember({ member, canEdit = false }: { member: Member; canEdit?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `member-${member.id}`,
+    disabled: !canEdit,
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    cursor: canEdit ? 'move' : 'default',
   };
 
   return (
@@ -394,8 +401,8 @@ function DraggableMember({ member }: { member: Member }) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className="bg-gray-700 p-3 rounded-lg cursor-move hover:bg-gray-600 transition-colors"
+      {...(canEdit ? listeners : {})}
+      className={`bg-gray-700 p-3 rounded-lg ${canEdit ? 'cursor-move hover:bg-gray-600' : ''} transition-colors`}
     >
       <div className="flex justify-between items-start">
         <div className="flex-1">
@@ -418,7 +425,8 @@ function BossCard({
   onRemove,
   onClear,
   onCopyFrom,
-  onCopyFromLastWeek
+  onCopyFromLastWeek,
+  canEdit = false
 }: { 
   boss: { name: string; tanks: number; healers: number; dps: number };
   assignments: any[];
@@ -427,6 +435,7 @@ function BossCard({
   onClear: () => void;
   onCopyFrom: (fromBoss: string) => void;
   onCopyFromLastWeek: () => void;
+  canEdit?: boolean;
 }) {
   const tankAssignments = assignments.filter(a => a.role === 'tank');
   const healerAssignments = assignments.filter(a => a.role === 'healer');
@@ -467,12 +476,14 @@ function BossCard({
                   {assignment.name}
                 </div>
               </div>
-              <button
-                onClick={() => onRemove(assignment.member_id)}
-                className="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-              >
-                ×
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => onRemove(assignment.member_id)}
+                  className="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
           {assignments.length === 0 && (
@@ -506,55 +517,57 @@ function BossCard({
     <div className="card">
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-md font-bold text-wow-gold">{boss.name}</h3>
-        <div className="flex gap-2">
-          <div className="relative" ref={copyMenuRef}>
-            <button
-              onClick={() => setShowCopyMenu(!showCopyMenu)}
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
-              title="Copy roster"
-            >
-              <Copy size={12} />
-            </button>
-            {showCopyMenu && (
-              <div className="absolute right-0 top-6 bg-gray-800 border border-gray-600 rounded shadow-lg z-10 min-w-[200px]">
-                <button
-                  onClick={() => {
-                    onCopyFromLastWeek();
-                    setShowCopyMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-gray-700 flex items-center gap-2"
-                >
-                  <Clock size={12} />
-                  Copy from Last Week
-                </button>
-                <div className="border-t border-gray-600 my-1"></div>
-                <div className="px-3 py-1 text-[10px] text-gray-500 uppercase">Copy from boss:</div>
-                {allBosses
-                  .filter(b => b.name !== boss.name)
-                  .map(b => (
-                    <button
-                      key={b.name}
-                      onClick={() => {
-                        onCopyFrom(b.name);
-                        setShowCopyMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-700"
-                    >
-                      {b.name}
-                    </button>
-                  ))}
-              </div>
+        {canEdit && (
+          <div className="flex gap-2">
+            <div className="relative" ref={copyMenuRef}>
+              <button
+                onClick={() => setShowCopyMenu(!showCopyMenu)}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                title="Copy roster"
+              >
+                <Copy size={12} />
+              </button>
+              {showCopyMenu && (
+                <div className="absolute right-0 top-6 bg-gray-800 border border-gray-600 rounded shadow-lg z-10 min-w-[200px]">
+                  <button
+                    onClick={() => {
+                      onCopyFromLastWeek();
+                      setShowCopyMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Clock size={12} />
+                    Copy from Last Week
+                  </button>
+                  <div className="border-t border-gray-600 my-1"></div>
+                  <div className="px-3 py-1 text-[10px] text-gray-500 uppercase">Copy from boss:</div>
+                  {allBosses
+                    .filter(b => b.name !== boss.name)
+                    .map(b => (
+                      <button
+                        key={b.name}
+                        onClick={() => {
+                          onCopyFrom(b.name);
+                          setShowCopyMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-700"
+                      >
+                        {b.name}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+            {assignments.length > 0 && (
+              <button
+                onClick={onClear}
+                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Clear
+              </button>
             )}
           </div>
-          {assignments.length > 0 && (
-            <button
-              onClick={onClear}
-              className="text-xs text-red-400 hover:text-red-300 transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+        )}
       </div>
       <div className="space-y-2">
         <RoleSection role="tank" count={boss.tanks} assignments={tankAssignments} colorClass="text-blue-400" />

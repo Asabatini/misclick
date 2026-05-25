@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import logger from '../utils/logger';
+import { authenticateToken, canEditBossAssignments, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -49,8 +50,8 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-// Save boss assignments for a week (bulk operation)
-router.post('/week/:weekStart', (req: Request, res: Response) => {
+// Save boss assignments for a week (bulk operation) - Admin/Officer only
+router.post('/week/:weekStart', authenticateToken, canEditBossAssignments, (req: AuthRequest, res: Response) => {
   const { weekStart } = req.params;
   const { assignments } = req.body; // Array of { boss_name, member_id, position, role }
 
@@ -89,8 +90,8 @@ router.post('/week/:weekStart', (req: Request, res: Response) => {
   }
 });
 
-// Clear assignments for a specific boss in a week
-router.delete('/week/:weekStart/boss/:bossName', (req: Request, res: Response) => {
+// Clear assignments for a specific boss in a week - Admin/Officer only
+router.delete('/week/:weekStart/boss/:bossName', authenticateToken, canEditBossAssignments, (req: AuthRequest, res: Response) => {
   const { weekStart, bossName } = req.params;
 
   try {
@@ -105,8 +106,8 @@ router.delete('/week/:weekStart/boss/:bossName', (req: Request, res: Response) =
   }
 });
 
-// Update single assignment
-router.put('/:id', (req: Request, res: Response) => {
+// Update single assignment - Admin/Officer only
+router.put('/:id', authenticateToken, canEditBossAssignments, (req: AuthRequest, res: Response) => {
   const { boss_name, member_id, position } = req.body;
 
   try {
@@ -128,8 +129,8 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-// Delete assignment
-router.delete('/:id', (req: Request, res: Response) => {
+// Delete assignment - Admin/Officer only
+router.delete('/:id', authenticateToken, canEditBossAssignments, (req: AuthRequest, res: Response) => {
   try {
     const stmt = db.prepare('DELETE FROM boss_assignments WHERE id = ?');
     stmt.run(req.params.id);

@@ -169,6 +169,19 @@ export function initializeDatabase() {
     )
   `);
 
+  // Users table for authentication
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'Guest',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      CHECK(role IN ('Administrator', 'Officer', 'Raider', 'Member', 'Guest'))
+    )
+  `);
+
   console.log('Database initialized successfully');
 }
 
