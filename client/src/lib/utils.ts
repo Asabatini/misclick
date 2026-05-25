@@ -58,7 +58,7 @@ export const MYTHIC_BOSSES = [
   { name: 'Imperator Averzian', tanks: 2, healers: 5, dps: 13 },
   { name: 'Vorasius', tanks: 2, healers: 4, dps: 14 },
   { name: 'Fallen-King Salhadaar', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Vaelgor and Ezzorak', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Vaelgor & Ezzorak', tanks: 2, healers: 5, dps: 13 },
   { name: 'Lightblinded Vanguard', tanks: 2, healers: 4, dps: 14 },
   { name: 'Crown of the Cosmos', tanks: 2, healers: 5, dps: 13 },
   { name: 'Belo\'ren, Child of A\'lar', tanks: 2, healers: 5, dps: 13 },
