@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Calendar, Swords } from 'lucide-react';
+import { Trophy, Calendar, Swords, RefreshCw } from 'lucide-react';
 import { MYTHIC_BOSSES } from '@/lib/utils';
 import { bossKillsAPI } from '@/lib/api';
 
@@ -14,6 +14,7 @@ interface BossKill {
 export default function Home() {
   const [bossKills, setBossKills] = useState<BossKill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadBossKills();
@@ -28,6 +29,18 @@ export default function Home() {
       console.error('Failed to load boss kills', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncBossKills = async () => {
+    try {
+      setSyncing(true);
+      await bossKillsAPI.sync();
+      await loadBossKills();
+    } catch (err) {
+      console.error('Failed to sync boss kills', err);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -58,9 +71,20 @@ export default function Home() {
               <p className="text-gray-400">Midnight Mythic</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-4xl font-bold text-blue-400">{progressCount}/{totalBosses}</div>
-            <div className="text-sm text-gray-400">Bosses Defeated</div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={syncBossKills}
+              disabled={syncing}
+              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Sync boss kills from Raider.IO"
+            >
+              <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </button>
+            <div className="text-right">
+              <div className="text-4xl font-bold text-blue-400">{progressCount}/{totalBosses}</div>
+              <div className="text-sm text-gray-400">Bosses Defeated</div>
+            </div>
           </div>
         </div>
         
