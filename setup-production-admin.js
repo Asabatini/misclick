@@ -14,24 +14,28 @@ console.log('🔧 Setting up production admin account...\n');
     const newPassword = 'P@55word87';
     const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     
-    // Update Juice to Administrator with new password
-    const updateResult = db.prepare(
-      'UPDATE users SET role = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?'
-    ).run('Administrator', passwordHash, 'juice');
+    // Check if juice user exists
+    const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get('juice');
     
-    if (updateResult.changes > 0) {
+    if (existingUser) {
+      // Update existing juice user to Administrator with new password
+      db.prepare(
+        'UPDATE users SET role = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?'
+      ).run('Administrator', passwordHash, 'juice');
       console.log('✅ Updated Juice to Administrator with new password');
     } else {
-      console.log('⚠️  Juice account not found');
+      // Create new juice user as Administrator
+      db.prepare(
+        'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)'
+      ).run('juice', passwordHash, 'Administrator');
+      console.log('✅ Created Juice as Administrator with password');
     }
     
-    // Delete the admin account
+    // Delete the admin account if it exists
     const deleteResult = db.prepare('DELETE FROM users WHERE username = ?').run('admin');
     
     if (deleteResult.changes > 0) {
       console.log('✅ Deleted admin account');
-    } else {
-      console.log('ℹ️  Admin account not found (may already be deleted)');
     }
     
     console.log('\n📋 Current users:');
