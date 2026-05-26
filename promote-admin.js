@@ -1,6 +1,11 @@
 const Database = require('better-sqlite3');
+const path = require('path');
 
-const db = new Database('./data/guild.db');
+const defaultPath = process.env.RENDER ? '/data/guild.db' : './data/guild.db';
+const dbPath = process.env.DATABASE_PATH || defaultPath;
+const db = new Database(dbPath);
+
+console.log(`📁 Using database at: ${dbPath}`);
 
 // Update admin user to Administrator
 const result = db.prepare('UPDATE users SET role = ? WHERE username = ?').run('Administrator', 'admin');

@@ -1,9 +1,11 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'data', 'guild.db');
+const defaultPath = process.env.RENDER ? '/data/guild.db' : path.join(__dirname, 'data', 'guild.db');
+const dbPath = process.env.DATABASE_PATH || defaultPath;
 const db = new Database(dbPath);
 
+console.log(`📁 Using database at: ${dbPath}`);
 console.log('🔄 Normalizing usernames to lowercase...\n');
 
 try {

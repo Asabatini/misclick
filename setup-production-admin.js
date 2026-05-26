@@ -2,9 +2,13 @@ const Database = require('better-sqlite3');
 const bcrypt = require('bcrypt');
 const path = require('path');
 
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'data', 'guild.db');
+// Use the same database path logic as database.ts
+const defaultPath = process.env.RENDER ? '/data/guild.db' : path.join(__dirname, 'data', 'guild.db');
+const dbPath = process.env.DATABASE_PATH || defaultPath;
 const db = new Database(dbPath);
 const SALT_ROUNDS = 10;
+
+console.log(`📁 Using database at: ${dbPath}`);
 
 console.log('🔧 Setting up production admin account...\n');
 
