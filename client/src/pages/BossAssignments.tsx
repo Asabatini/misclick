@@ -134,11 +134,11 @@ export default function BossAssignments() {
   const saveAssignments = async () => {
     try {
       const allAssignments = Object.entries(assignments).flatMap(([bossName, bossMembers]) =>
-        bossMembers.map((member, index) => ({
+        bossMembers.map((assignment, index) => ({
           boss_name: bossName,
-          member_id: member.member_id,
+          member_id: assignment.member_id,
           position: index,
-          role: member.role || 'dps', // Include the role (tank/healer/dps/bench) with default
+          role: assignment.role || 'dps', // Include the role (tank/healer/dps/bench) with default
         }))
       );
 
