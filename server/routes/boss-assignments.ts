@@ -8,6 +8,8 @@ const router = Router();
 // Get boss assignments for a specific week
 router.get('/week/:weekStart', (req: Request, res: Response) => {
   try {
+    logger.info(`Fetching boss assignments for: ${req.params.weekStart}`);
+    
     const assignments = db.prepare(`
       SELECT ba.id, ba.week_start, ba.boss_name, ba.member_id, ba.position, ba.role, ba.created_at,
              m.name, m.class, m.spec
@@ -16,6 +18,8 @@ router.get('/week/:weekStart', (req: Request, res: Response) => {
       WHERE ba.week_start = ?
       ORDER BY ba.boss_name, ba.position
     `).all(req.params.weekStart);
+    
+    logger.info(`Found ${assignments.length} boss assignments for ${req.params.weekStart}`);
     
     // Group by boss name
     const grouped = assignments.reduce((acc: any, assignment: any) => {
@@ -59,6 +63,9 @@ router.post('/week/:weekStart', authenticateToken, canEditBossAssignments, (req:
     return res.status(400).json({ error: 'Assignments must be an array' });
   }
 
+  logger.info(`Saving ${assignments.length} boss assignments for: ${weekStart}`);
+  logger.info(`User: ${req.user?.username} (${req.user?.role})`);
+
   try {
     // Use a transaction to ensure all-or-nothing
     const deleteStmt = db.prepare('DELETE FROM boss_assignments WHERE week_start = ?');
@@ -68,7 +75,8 @@ router.post('/week/:weekStart', authenticateToken, canEditBossAssignments, (req:
 
     db.transaction(() => {
       // Clear existing assignments for this week
-      deleteStmt.run(weekStart);
+      const deleteResult = deleteStmt.run(weekStart);
+      logger.info(`Deleted ${deleteResult.changes} existing assignments for ${weekStart}`);
       
       // Insert new assignments
       for (const assignment of assignments) {
@@ -80,9 +88,11 @@ router.post('/week/:weekStart', authenticateToken, canEditBossAssignments, (req:
           assignment.role || null
         );
       }
+      
+      logger.info(`Inserted ${assignments.length} new assignments for ${weekStart}`);
     })();
 
-    logger.info(`Saved ${assignments.length} boss assignments for week ${weekStart}`);
+    logger.info(`✅ Successfully saved ${assignments.length} boss assignments for ${weekStart}`);
     res.json({ message: 'Boss assignments saved successfully', count: assignments.length });
   } catch (error) {
     logger.error('Error saving boss assignments', error);

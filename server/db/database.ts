@@ -144,6 +144,49 @@ export function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Migrate old weekly rosters to single 'current' roster
+  const oldAssignments = db.prepare(`
+    SELECT COUNT(*) as count FROM boss_assignments WHERE week_start != 'current'
+  `).get() as { count: number };
+  
+  if (oldAssignments.count > 0) {
+    console.log(`🔄 Migrating ${oldAssignments.count} old weekly assignments to 'current' roster...`);
+    
+    // Get the most recent week's assignments
+    const mostRecentWeek = db.prepare(`
+      SELECT week_start FROM boss_assignments 
+      WHERE week_start != 'current'
+      ORDER BY week_start DESC 
+      LIMIT 1
+    `).get() as { week_start: string } | undefined;
+    
+    if (mostRecentWeek) {
+      console.log(`   Using assignments from week: ${mostRecentWeek.week_start}`);
+      
+      db.transaction(() => {
+        // Delete any existing 'current' assignments
+        db.prepare(`DELETE FROM boss_assignments WHERE week_start = 'current'`).run();
+        
+        // Copy most recent week to 'current'
+        db.prepare(`
+          INSERT INTO boss_assignments (week_start, boss_name, member_id, position, role, created_at)
+          SELECT 'current', boss_name, member_id, position, role, created_at
+          FROM boss_assignments
+          WHERE week_start = ?
+        `).run(mostRecentWeek.week_start);
+        
+        // Delete all old weekly assignments
+        db.prepare(`DELETE FROM boss_assignments WHERE week_start != 'current'`).run();
+      })();
+      
+      const currentCount = db.prepare(`
+        SELECT COUNT(*) as count FROM boss_assignments WHERE week_start = 'current'
+      `).get() as { count: number };
+      
+      console.log(`   ✅ Migrated ${currentCount.count} assignments to 'current' roster`);
+    }
+  }
+
   // Fight preferences table
   db.exec(`
     CREATE TABLE IF NOT EXISTS fight_preferences (
@@ -182,7 +225,35 @@ export function initializeDatabase() {
     )
   `);
 
-  console.log('Database initialized successfully');
+  console.log('✅ Database initialized successfully');
+  
+  // Log current state for diagnostics
+  const stats = {
+    members: db.prepare('SELECT COUNT(*) as count FROM members').get() as { count: number },
+    assignments: db.prepare('SELECT COUNT(*) as count FROM boss_assignments').get() as { count: number },
+    users: db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number },
+    bossKills: db.prepare('SELECT COUNT(*) as count FROM boss_kills').get() as { count: number },
+  };
+  
+  console.log(`📊 Database stats:`, {
+    members: stats.members.count,
+    assignments: stats.assignments.count,
+    users: stats.users.count,
+    bossKills: stats.bossKills.count,
+  });
+  
+  if (stats.assignments.count > 0) {
+    const assignmentsByWeek = db.prepare(`
+      SELECT week_start, COUNT(*) as count 
+      FROM boss_assignments 
+      GROUP BY week_start
+    `).all() as Array<{ week_start: string; count: number }>;
+    
+    console.log('   Boss assignments by roster:');
+    assignmentsByWeek.forEach(row => {
+      console.log(`   - ${row.week_start}: ${row.count} assignments`);
+    });
+  }
 }
 
 export default db;
