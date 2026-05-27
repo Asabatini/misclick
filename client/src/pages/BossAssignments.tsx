@@ -2,15 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Save, ChevronLeft, ChevronRight, Copy, Clock, RefreshCw } from 'lucide-react';
+import { Save, Copy, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { bossAssignmentsAPI, membersAPI } from '@/lib/api';
-import { getWeekStart, getWeekEnd, MYTHIC_BOSSES, getClassColor } from '@/lib/utils';
+import { MYTHIC_BOSSES, getClassColor } from '@/lib/utils';
 import type { Member, BossRoster } from '@/types';
+
+// Use a constant roster ID instead of weekly rosters
+const ROSTER_ID = 'current';
 
 export default function BossAssignments() {
   const { canEditBossAssignments } = useAuth();
-  const [currentWeek, setCurrentWeek] = useState(getWeekStart());
   const [members, setMembers] = useState<Member[]>([]);
   const [assignments, setAssignments] = useState<BossRoster>({});
   const [availableMembers, setAvailableMembers] = useState<Member[]>([]);
@@ -28,14 +30,14 @@ export default function BossAssignments() {
 
   useEffect(() => {
     loadData();
-  }, [currentWeek]);
+  }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [membersRes, assignmentsRes] = await Promise.all([
         membersAPI.getAll(),
-        bossAssignmentsAPI.getWeek(currentWeek),
+        bossAssignmentsAPI.getWeek(ROSTER_ID),
       ]);
       setMembers(membersRes.data);
       setAssignments(assignmentsRes.data);
@@ -106,7 +108,7 @@ export default function BossAssignments() {
       const bossAssignments = prev[bossName] || [];
       const newAssignment = {
         id: Date.now(),
-        week_start: currentWeek,
+        week_start: ROSTER_ID,
         boss_name: bossName,
         member_id: member.id,
         name: member.name,
@@ -142,7 +144,7 @@ export default function BossAssignments() {
         }))
       );
 
-      await bossAssignmentsAPI.saveWeek(currentWeek, allAssignments);
+      await bossAssignmentsAPI.saveWeek(ROSTER_ID, allAssignments);
       alert('Boss assignments saved successfully!');
     } catch (err) {
       alert('Failed to save boss assignments');
@@ -170,7 +172,7 @@ export default function BossAssignments() {
     }
     
     try {
-      await bossAssignmentsAPI.clearBoss(currentWeek, bossName);
+      await bossAssignmentsAPI.clearBoss(ROSTER_ID, bossName);
       setAssignments(prev => ({
         ...prev,
         [bossName]: [],
@@ -202,43 +204,6 @@ export default function BossAssignments() {
     alert(`Copied roster from ${fromBoss} to ${toBoss}`);
   };
 
-  const copyFromLastWeek = async (bossName: string) => {
-    try {
-      const lastWeekDate = new Date(currentWeek);
-      lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-      const lastWeek = getWeekStart(lastWeekDate);
-
-      const lastWeekData = await bossAssignmentsAPI.getWeek(lastWeek);
-      const lastWeekBossAssignments = lastWeekData.data[bossName] || [];
-
-      if (lastWeekBossAssignments.length === 0) {
-        alert(`${bossName} had no assignments last week`);
-        return;
-      }
-
-      const copiedAssignments = lastWeekBossAssignments.map((assignment: any) => ({
-        ...assignment,
-        id: Date.now() + Math.random(),
-        week_start: currentWeek,
-      }));
-
-      setAssignments(prev => ({
-        ...prev,
-        [bossName]: copiedAssignments,
-      }));
-      alert(`Copied ${bossName} roster from last week`);
-    } catch (err) {
-      alert('Failed to copy from last week');
-      console.error(err);
-    }
-  };
-
-  const changeWeek = (direction: 'prev' | 'next') => {
-    const date = new Date(currentWeek);
-    date.setDate(date.getDate() + (direction === 'next' ? 7 : -7));
-    setCurrentWeek(getWeekStart(date));
-  };
-
   if (loading) {
     return <div className="text-center py-8">Loading boss assignments...</div>;
   }
@@ -261,35 +226,22 @@ export default function BossAssignments() {
             <h2 className="text-2xl font-bold mb-2">Boss Assignments</h2>
             <p className="text-gray-400">Drag and drop members to assign them to boss fights</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <button onClick={() => changeWeek('prev')} className="btn btn-secondary p-2">
-                <ChevronLeft size={20} />
+          {canEditBossAssignments && (
+            <div className="flex gap-2">
+              <button 
+                onClick={syncRoster} 
+                disabled={syncing}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Syncing...' : 'Sync Roster'}
               </button>
-              <span className="font-medium px-4">
-                Week of {currentWeek} - {getWeekEnd(currentWeek)}
-              </span>
-              <button onClick={() => changeWeek('next')} className="btn btn-secondary p-2">
-                <ChevronRight size={20} />
+              <button onClick={saveAssignments} className="btn btn-primary flex items-center gap-2">
+                <Save size={18} />
+                Save Roster
               </button>
             </div>
-            {canEditBossAssignments && (
-              <div className="flex gap-2">
-                <button 
-                  onClick={syncRoster} 
-                  disabled={syncing}
-                  className="btn btn-secondary flex items-center gap-2"
-                >
-                  <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-                  {syncing ? 'Syncing...' : 'Sync Roster'}
-                </button>
-                <button onClick={saveAssignments} className="btn btn-primary flex items-center gap-2">
-                  <Save size={18} />
-                  Save Roster
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -310,7 +262,6 @@ export default function BossAssignments() {
                   onRemove={(memberId) => removeMemberFromBoss(boss.name, memberId)}
                   onClear={() => clearBossRoster(boss.name)}
                   onCopyFrom={(fromBoss) => copyBossRoster(fromBoss, boss.name)}
-                  onCopyFromLastWeek={() => copyFromLastWeek(boss.name)}
                   canEdit={canEditBossAssignments}
                 />
               ))}
@@ -425,7 +376,6 @@ function BossCard({
   onRemove,
   onClear,
   onCopyFrom,
-  onCopyFromLastWeek,
   canEdit = false
 }: { 
   boss: { name: string; tanks: number; healers: number; dps: number };
@@ -434,7 +384,6 @@ function BossCard({
   onRemove: (memberId: number) => void;
   onClear: () => void;
   onCopyFrom: (fromBoss: string) => void;
-  onCopyFromLastWeek: () => void;
   canEdit?: boolean;
 }) {
   const tankAssignments = assignments.filter(a => a.role === 'tank');
@@ -529,17 +478,6 @@ function BossCard({
               </button>
               {showCopyMenu && (
                 <div className="absolute right-0 top-6 bg-gray-800 border border-gray-600 rounded shadow-lg z-10 min-w-[200px]">
-                  <button
-                    onClick={() => {
-                      onCopyFromLastWeek();
-                      setShowCopyMenu(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    <Clock size={12} />
-                    Copy from Last Week
-                  </button>
-                  <div className="border-t border-gray-600 my-1"></div>
                   <div className="px-3 py-1 text-[10px] text-gray-500 uppercase">Copy from boss:</div>
                   {allBosses
                     .filter(b => b.name !== boss.name)
