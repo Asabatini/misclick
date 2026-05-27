@@ -231,6 +231,7 @@ export function initializeDatabase() {
   const stats = {
     members: db.prepare('SELECT COUNT(*) as count FROM members').get() as { count: number },
     assignments: db.prepare('SELECT COUNT(*) as count FROM boss_assignments').get() as { count: number },
+    preferences: db.prepare('SELECT COUNT(*) as count FROM fight_preferences').get() as { count: number },
     users: db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number },
     bossKills: db.prepare('SELECT COUNT(*) as count FROM boss_kills').get() as { count: number },
   };
@@ -238,6 +239,7 @@ export function initializeDatabase() {
   console.log(`📊 Database stats:`, {
     members: stats.members.count,
     assignments: stats.assignments.count,
+    preferences: stats.preferences.count,
     users: stats.users.count,
     bossKills: stats.bossKills.count,
   });
@@ -252,6 +254,19 @@ export function initializeDatabase() {
     console.log('   Boss assignments by roster:');
     assignmentsByWeek.forEach(row => {
       console.log(`   - ${row.week_start}: ${row.count} assignments`);
+    });
+  }
+  
+  if (stats.preferences.count > 0) {
+    const preferencesByBoss = db.prepare(`
+      SELECT boss_name, COUNT(*) as count 
+      FROM fight_preferences 
+      GROUP BY boss_name
+    `).all() as Array<{ boss_name: string; count: number }>;
+    
+    console.log('   Fight preferences by boss:');
+    preferencesByBoss.forEach(row => {
+      console.log(`   - ${row.boss_name}: ${row.count} preferences`);
     });
   }
 }

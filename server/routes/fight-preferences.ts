@@ -14,6 +14,7 @@ router.get('/', (req: Request, res: Response) => {
       JOIN members m ON fp.member_id = m.id
       ORDER BY fp.boss_name, fp.priority, fp.created_at
     `).all();
+    logger.info(`Fetched ${preferences.length} fight preferences`);
     res.json(preferences);
   } catch (error) {
     logger.error('Error fetching fight preferences', error);
@@ -61,6 +62,8 @@ router.post('/', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  logger.info(`Creating fight preference: member_id=${member_id}, boss=${boss_name}, priority=${priority || 'normal'}, user=${req.user?.username}`);
+
   try {
     const stmt = db.prepare(
       'INSERT INTO fight_preferences (member_id, boss_name, reason, priority) VALUES (?, ?, ?, ?)'
@@ -73,6 +76,8 @@ router.post('/', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest
       JOIN members m ON fp.member_id = m.id
       WHERE fp.id = ?
     `).get(result.lastInsertRowid);
+    
+    logger.info(`✅ Created fight preference ID ${result.lastInsertRowid} for ${boss_name}`);
     res.status(201).json(newPreference);
   } catch (error) {
     logger.error('Error creating fight preference', error);
@@ -106,8 +111,10 @@ router.put('/:id', authenticateToken, canAddAbsencesPreferences, (req: AuthReque
 // Delete fight preference - Requires login (Raider/Member/Officer/Admin)
 router.delete('/:id', authenticateToken, canAddAbsencesPreferences, (req: AuthRequest, res: Response) => {
   try {
+    logger.info(`Deleting fight preference ID ${req.params.id}, user=${req.user?.username}`);
     const stmt = db.prepare('DELETE FROM fight_preferences WHERE id = ?');
-    stmt.run(req.params.id);
+    const result = stmt.run(req.params.id);
+    logger.info(`✅ Deleted fight preference ID ${req.params.id} (${result.changes} rows affected)`);
     res.status(204).send();
   } catch (error) {
     logger.error('Error deleting fight preference', error);

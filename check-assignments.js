@@ -56,6 +56,38 @@ try {
     });
   }
   
+  // Check fight preferences
+  console.log('\n=== FIGHT PREFERENCES ===');
+  const preferences = db.prepare(`
+    SELECT fp.boss_name, fp.reason, fp.priority, fp.created_at, m.name
+    FROM fight_preferences fp
+    LEFT JOIN members m ON fp.member_id = m.id
+    ORDER BY fp.boss_name, fp.priority
+  `).all();
+  
+  if (preferences.length === 0) {
+    console.log('❌ No fight preferences found in database\n');
+  } else {
+    console.log(`✅ Found ${preferences.length} fight preferences:`);
+    
+    // Group by boss
+    const byBoss = {};
+    preferences.forEach(p => {
+      if (!byBoss[p.boss_name]) {
+        byBoss[p.boss_name] = [];
+      }
+      byBoss[p.boss_name].push(p);
+    });
+    
+    Object.keys(byBoss).forEach(boss => {
+      console.log(`\n  ${boss}: ${byBoss[boss].length} preferences`);
+      byBoss[boss].forEach(p => {
+        const priority = p.priority === 'high' ? '🔴 HIGH' : '🔵 NORMAL';
+        console.log(`    ${priority} - ${p.name || 'Unknown'}: ${p.reason}`);
+      });
+    });
+  }
+  
   // Check users
   console.log('\n=== USERS ===');
   const users = db.prepare('SELECT id, username, role FROM users').all();

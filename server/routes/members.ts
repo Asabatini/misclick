@@ -99,12 +99,22 @@ router.post('/sync', async (req: Request, res: Response) => {
     };
 
     let synced = 0;
-    const stmt = db.prepare(
-      'INSERT OR REPLACE INTO members (name, class, spec, rank, role, level, ilvl) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    let updated = 0;
+    let inserted = 0;
+    
+    // Use INSERT OR IGNORE to avoid replacing (which deletes and re-inserts)
+    // Then UPDATE existing members to preserve IDs and relationships
+    const insertStmt = db.prepare(
+      'INSERT OR IGNORE INTO members (name, class, spec, rank, role, level, ilvl, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)'
+    );
+    const updateStmt = db.prepare(
+      'UPDATE members SET class = ?, rank = ?, level = ?, ilvl = ?, last_updated = CURRENT_TIMESTAMP WHERE name = ?'
     );
 
     // Helper function to delay between API calls
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    logger.info(`Starting roster sync for ${rosterData.members.length} members...`);
 
     for (const member of rosterData.members) {
       const character = member.character;
@@ -123,7 +133,8 @@ router.post('/sync', async (req: Request, res: Response) => {
         logger.warn(`Could not fetch ilvl for ${character.name}:`, error);
       }
       
-      stmt.run(
+      // Try to insert (will be ignored if already exists)
+      const insertResult = insertStmt.run(
         character.name,
         className,
         null, // Spec not available in basic roster endpoint
@@ -132,11 +143,34 @@ router.post('/sync', async (req: Request, res: Response) => {
         level, // Character level from roster
         ilvl // Average item level from equipment endpoint
       );
+      
+      if (insertResult.changes > 0) {
+        inserted++;
+        logger.info(`  ➕ Inserted new member: ${character.name}`);
+      } else {
+        // Member exists, update their info
+        const updateResult = updateStmt.run(
+          className,
+          member.rank?.toString() || '0',
+          level,
+          ilvl,
+          character.name
+        );
+        if (updateResult.changes > 0) {
+          updated++;
+        }
+      }
+      
       synced++;
     }
 
-    logger.info(`Synced ${synced} members from Blizzard API`);
-    res.json({ message: `Successfully synced ${synced} members with item levels`, count: synced });
+    logger.info(`✅ Roster sync complete: ${synced} total, ${inserted} new, ${updated} updated`);
+    res.json({ 
+      message: `Successfully synced ${synced} members (${inserted} new, ${updated} updated)`, 
+      count: synced,
+      inserted,
+      updated
+    });
   } catch (error) {
     logger.error('Error syncing roster', error);
     res.status(500).json({ error: 'Failed to sync roster from Blizzard API' });
