@@ -363,13 +363,19 @@ function DraggableMember({ member, canEdit = false }: { member: Member; canEdit?
     cursor: canEdit ? 'move' : 'default',
   };
 
+  const isTrial = member.rank === '6';
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...(canEdit ? listeners : {})}
-      className={`bg-gray-700 p-3 rounded-lg ${canEdit ? 'cursor-move hover:bg-gray-600' : ''} transition-colors`}
+      className={`p-3 rounded-lg transition-colors ${
+        isTrial
+          ? 'bg-yellow-900/30 border border-yellow-600'
+          : 'bg-gray-700'
+      } ${canEdit ? 'cursor-move hover:bg-gray-600' : ''}`}
     >
       <div className="flex justify-between items-start">
         <div className="flex-1">

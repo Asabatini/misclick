@@ -303,13 +303,19 @@ function DraggableMember({ member }: { member: Member }) {
     opacity: isDragging ? 0.5 : 1,
   } : undefined;
 
+  const isTrial = member.rank === '6';
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...listeners}
       {...attributes}
-      className="bg-gray-750 p-3 rounded-lg border border-gray-700 hover:border-gray-600 cursor-grab active:cursor-grabbing"
+      className={`p-3 rounded-lg border cursor-grab active:cursor-grabbing ${
+        isTrial 
+          ? 'bg-yellow-900/30 border-yellow-600 hover:border-yellow-500' 
+          : 'bg-gray-750 border-gray-700 hover:border-gray-600'
+      }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
