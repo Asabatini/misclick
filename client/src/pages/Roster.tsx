@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core';
-import { RefreshCw, Plus, Users } from 'lucide-react';
+import { RefreshCw, Plus, Users, Filter } from 'lucide-react';
 import { membersAPI } from '@/lib/api';
 import { getClassColor } from '@/lib/utils';
 import type { Member } from '@/types';
+
+const WOW_CLASSES = [
+  'Warrior', 'Paladin', 'Hunter', 'Rogue', 'Priest',
+  'Death Knight', 'Shaman', 'Mage', 'Warlock', 'Monk',
+  'Druid', 'Demon Hunter', 'Evoker'
+];
 
 export default function Roster() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -12,6 +18,8 @@ export default function Roster() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [classFilter, setClassFilter] = useState<string>('all');
+  const [rankFilter, setRankFilter] = useState<string>('all');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -82,9 +90,21 @@ export default function Roster() {
     }
   };
 
-  const unassignedMembers = members.filter(m => !m.raid_status);
-  const mainRoster = members.filter(m => m.raid_status === 'main');
-  const benchRoster = members.filter(m => m.raid_status === 'bench');
+  // Filter members based on selected filters
+  const filterMembers = (memberList: Member[]) => {
+    return memberList.filter(member => {
+      const matchesClass = classFilter === 'all' || member.class === classFilter;
+      const matchesRank = rankFilter === 'all' || member.rank === rankFilter;
+      return matchesClass && matchesRank;
+    });
+  };
+
+  // Get unique ranks from members for filter dropdown
+  const uniqueRanks = Array.from(new Set(members.map(m => m.rank))).sort();
+
+  const unassignedMembers = filterMembers(members.filter(m => !m.raid_status));
+  const mainRoster = filterMembers(members.filter(m => m.raid_status === 'main'));
+  const benchRoster = filterMembers(members.filter(m => m.raid_status === 'bench'));
 
   if (loading) {
     return <div className="text-center py-8">Loading roster...</div>;
@@ -122,6 +142,49 @@ export default function Roster() {
               <Plus size={18} />
               Add Member
             </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="card">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter size={18} className="text-gray-400" />
+              <span className="font-medium">Filters:</span>
+            </div>
+            <div className="flex gap-3">
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Classes</option>
+                {WOW_CLASSES.map(cls => (
+                  <option key={cls} value={cls}>{cls}</option>
+                ))}
+              </select>
+              <select
+                value={rankFilter}
+                onChange={(e) => setRankFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Ranks</option>
+                {uniqueRanks.map(rank => (
+                  <option key={rank} value={rank}>Rank {rank}</option>
+                ))}
+              </select>
+              {(classFilter !== 'all' || rankFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setClassFilter('all');
+                    setRankFilter('all');
+                  }}
+                  className="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -249,11 +312,15 @@ function DraggableMember({ member }: { member: Member }) {
       className="bg-gray-750 p-3 rounded-lg border border-gray-700 hover:border-gray-600 cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex-1">
           <div className="font-medium" style={{ color: getClassColor(member.class) }}>
             {member.name}
           </div>
-          <div className="text-sm text-gray-400">{member.class}</div>
+          <div className="text-sm text-gray-400 flex items-center gap-2">
+            <span>{member.class}</span>
+            <span className="text-gray-500">•</span>
+            <span>Rank {member.rank}</span>
+          </div>
         </div>
         <div className="text-right">
           {member.level && <div className="text-sm text-gray-400">Lvl {member.level}</div>}

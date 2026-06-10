@@ -288,22 +288,28 @@ export default function BossAssignments() {
 
 function AvailableMembersSection({ members, canEdit = false }: { members: Member[]; canEdit?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [rankFilter, setRankFilter] = useState<string>('all');
   const { setNodeRef, isOver } = useDroppable({
     id: 'available',
   });
 
+  // Get unique ranks from members for filter dropdown
+  const uniqueRanks = Array.from(new Set(members.map(m => m.rank))).sort();
+
   const filteredMembers = members.filter(member => {
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       member.name.toLowerCase().includes(search) ||
       member.class.toLowerCase().includes(search)
     );
+    const matchesRank = rankFilter === 'all' || member.rank === rankFilter;
+    return matchesSearch && matchesRank;
   });
 
   return (
     <div className="card">
       <h3 className="text-lg font-bold mb-4">Guild Roster</h3>
-      <div className="mb-3">
+      <div className="mb-3 space-y-2">
         <input
           type="text"
           placeholder="Search by name or class..."
@@ -311,6 +317,16 @@ function AvailableMembersSection({ members, canEdit = false }: { members: Member
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm focus:outline-none focus:border-blue-500"
         />
+        <select
+          value={rankFilter}
+          onChange={(e) => setRankFilter(e.target.value)}
+          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm focus:outline-none focus:border-blue-500"
+        >
+          <option value="all">All Ranks</option>
+          {uniqueRanks.map(rank => (
+            <option key={rank} value={rank}>Rank {rank}</option>
+          ))}
+        </select>
       </div>
       <div 
         ref={setNodeRef}
@@ -324,7 +340,7 @@ function AvailableMembersSection({ members, canEdit = false }: { members: Member
           ))}
         </SortableContext>
         {filteredMembers.length === 0 && members.length > 0 && (
-          <p className="text-gray-400 text-sm text-center py-4">No members match your search</p>
+          <p className="text-gray-400 text-sm text-center py-4">No members match your filters</p>
         )}
         {members.length === 0 && (
           <p className="text-gray-400 text-sm text-center py-4">All members assigned</p>
@@ -360,8 +376,10 @@ function DraggableMember({ member, canEdit = false }: { member: Member; canEdit?
           <div className="font-medium" style={{ color: getClassColor(member.class) }}>
             {member.name}
           </div>
-          <div className="text-sm" style={{ color: getClassColor(member.class) }}>
-            {member.class}
+          <div className="text-sm flex items-center gap-2" style={{ color: getClassColor(member.class) }}>
+            <span>{member.class}</span>
+            <span className="text-gray-500">•</span>
+            <span className="text-gray-400">Rank {member.rank}</span>
           </div>
         </div>
       </div>

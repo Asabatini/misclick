@@ -1,8 +1,9 @@
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home as HomeIcon, ClipboardList, Swords, MessageSquare, Users, LogOut, User } from 'lucide-react';
+import { Home as HomeIcon, ClipboardList, Swords, MessageSquare, Users, LogOut, User, Shield } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import Home from './pages/Home';
 import BossAssignments from './pages/BossAssignments';
+import Roster from './pages/Roster';
 import Absences from './pages/Absences';
 import FightPreferences from './pages/FightPreferences';
 import Login from './pages/Login';
@@ -10,7 +11,7 @@ import UserManagement from './pages/UserManagement';
 
 function App() {
   const location = useLocation();
-  const { user, loading, logout, isAuthenticated, canViewAllTabs, canManageUsers } = useAuth();
+  const { user, loading, logout, isAuthenticated, canViewAllTabs, canManageUsers, canEditBossAssignments } = useAuth();
 
   if (loading) {
     return (
@@ -36,6 +37,7 @@ function App() {
   // Define navigation items based on user role
   const navItems = [
     { path: '/', icon: HomeIcon, label: 'Home', roles: ['Administrator', 'Officer', 'Raider', 'Member', 'Guest'] },
+    { path: '/roster', icon: Shield, label: 'Roster', roles: ['Administrator', 'Officer'] },
     { path: '/boss-assignments', icon: Swords, label: 'Boss Assignments', roles: ['Administrator', 'Officer', 'Raider', 'Member', 'Guest'] },
     { path: '/absences', icon: ClipboardList, label: 'Absences', roles: ['Administrator', 'Officer', 'Raider', 'Member'] },
     { path: '/preferences', icon: MessageSquare, label: 'Fight Preferences', roles: ['Administrator', 'Officer', 'Raider', 'Member', 'Guest'] },
@@ -109,6 +111,10 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Home />} />
+          <Route 
+            path="/roster" 
+            element={canEditBossAssignments ? <Roster /> : <Navigate to="/" replace />} 
+          />
           <Route path="/boss-assignments" element={<BossAssignments />} />
           <Route 
             path="/absences" 
