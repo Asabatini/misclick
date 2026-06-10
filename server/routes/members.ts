@@ -82,14 +82,32 @@ router.delete('/:id', (req: Request, res: Response) => {
   }
 });
 
+// Debug endpoint to check Blizzard API config
+router.get('/debug/config', (req: Request, res: Response) => {
+  const config = {
+    region: process.env.BLIZZARD_REGION || 'us',
+    realm: process.env.WOW_REALM,
+    guildName: process.env.WOW_GUILD_NAME,
+    hasClientId: !!process.env.BLIZZARD_CLIENT_ID,
+    hasClientSecret: !!process.env.BLIZZARD_CLIENT_SECRET,
+  };
+  
+  logger.info('Debug config requested:', config);
+  res.json(config);
+});
+
 // Sync roster from Blizzard API
 router.post('/sync', async (req: Request, res: Response) => {
   try {
+    logger.info('Starting roster sync from Blizzard API...');
     const rosterData = await fetchGuildRoster();
     
     if (!rosterData.members || rosterData.members.length === 0) {
+      logger.warn('No members found in Blizzard API roster response');
       return res.status(404).json({ error: 'No members found in roster' });
     }
+
+    logger.info(`Received ${rosterData.members.length} members from Blizzard API`);
 
     // Class ID to Name mapping
     const CLASS_MAP: Record<number, string> = {
@@ -101,6 +119,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     let synced = 0;
     let updated = 0;
     let inserted = 0;
+    let skipped = 0;
     
     // Use INSERT OR IGNORE to avoid replacing (which deletes and re-inserts)
     // Then UPDATE existing members to preserve IDs and relationships
@@ -114,13 +133,23 @@ router.post('/sync', async (req: Request, res: Response) => {
     // Helper function to delay between API calls
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    logger.info(`Starting roster sync for ${rosterData.members.length} members...`);
+    logger.info(`Processing ${rosterData.members.length} members...`);
 
     for (const member of rosterData.members) {
       const character = member.character;
+      
+      if (!character || !character.name) {
+        logger.warn('Skipping member with missing character data:', member);
+        skipped++;
+        continue;
+      }
+      
       const classId = character.playable_class?.id;
       const className = classId ? CLASS_MAP[classId] || 'Unknown' : 'Unknown';
       const level = character.level || null;
+      const rankValue = member.rank?.toString() || '0';
+      
+      logger.info(`Processing: ${character.name} (${className}, Rank ${rankValue}, Level ${level})`);
       
       // Fetch item level for this character using their actual realm
       let ilvl = null;
@@ -138,7 +167,7 @@ router.post('/sync', async (req: Request, res: Response) => {
         character.name,
         className,
         null, // Spec not available in basic roster endpoint
-        member.rank?.toString() || '0',
+        rankValue,
         'DPS', // Default role, can be updated manually
         level, // Character level from roster
         ilvl // Average item level from equipment endpoint
@@ -164,12 +193,13 @@ router.post('/sync', async (req: Request, res: Response) => {
       synced++;
     }
 
-    logger.info(`✅ Roster sync complete: ${synced} total, ${inserted} new, ${updated} updated`);
+    logger.info(`✅ Roster sync complete: ${synced} processed, ${inserted} new, ${updated} updated, ${skipped} skipped`);
     res.json({ 
-      message: `Successfully synced ${synced} members (${inserted} new, ${updated} updated)`, 
+      message: `Successfully synced ${synced} members (${inserted} new, ${updated} updated${skipped > 0 ? `, ${skipped} skipped` : ''})`, 
       count: synced,
       inserted,
-      updated
+      updated,
+      skipped
     });
   } catch (error) {
     logger.error('Error syncing roster', error);

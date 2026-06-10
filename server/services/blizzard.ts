@@ -79,6 +79,8 @@ export async function fetchGuildRoster() {
   const realmSlug = realm.toLowerCase().replace(/\s+/g, '-');
   const guildSlug = guildName.toLowerCase().replace(/\s+/g, '-');
 
+  logger.info(`Fetching guild roster: ${guildName} on ${realmSlug} (${region})`);
+
   try {
     const response = await axios.get(
       `https://${region}.api.blizzard.com/data/wow/guild/${realmSlug}/${guildSlug}/roster`,
@@ -93,7 +95,15 @@ export async function fetchGuildRoster() {
       }
     );
 
-    logger.info(`Fetched roster for ${guildName} - ${response.data.members?.length || 0} members`);
+    const memberCount = response.data.members?.length || 0;
+    logger.info(`Fetched roster for ${guildName} - ${memberCount} members found`);
+    
+    // Log member list for debugging
+    if (response.data.members) {
+      const memberNames = response.data.members.map((m: any) => m.character?.name).filter(Boolean);
+      logger.info(`Member names: ${memberNames.join(', ')}`);
+    }
+    
     return response.data;
   } catch (error) {
     logger.error('Failed to fetch guild roster', error);
