@@ -7,10 +7,10 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon --watch server --exec ts-node server/index.ts",
     "client:dev": "cd client && npm run dev",
-    "build": "cd client && npm install && npm run build",
+    "build": "npm run build:server && cd client && npm install && npm run build",
     "build:server": "tsc -p server/tsconfig.json",
     "build:client": "cd client && npm run build",
-    "start": "npx ts-node server/index.ts",
+    "start": "node dist/server/index.js",
     "setup": "npm install && cd client && npm install"
   },
   "keywords": [
