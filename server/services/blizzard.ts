@@ -170,35 +170,61 @@ export async function fetchRaiderIOGuildBossKills() {
     // Fetch guild profile with raid encounters for each tier separately
     // (Raider.IO API only returns one tier's encounters when multiple are requested)
     
+    let midnightEncounters: any[] = [];
+    let sporefallEncounters: any[] = [];
+    let guildData: any = null;
+
     // tier-mn-1 = Midnight Season 1
-    const midnightResponse = await axios.get(
-      'https://raider.io/api/v1/guilds/profile',
-      {
-        params: {
-          region: region,
-          realm: realmSlug,
-          name: guildName,
-          fields: 'raid_encounters:tier-mn-1:mythic'
+    try {
+      const midnightResponse = await axios.get(
+        'https://raider.io/api/v1/guilds/profile',
+        {
+          params: {
+            region: region,
+            realm: realmSlug,
+            name: guildName,
+            fields: 'raid_encounters:tier-mn-1:mythic'
+          }
         }
+      );
+      midnightEncounters = midnightResponse.data?.raid_encounters || [];
+      guildData = midnightResponse.data;
+    } catch (error: any) {
+      if (error.response?.status !== 404) {
+        logger.warn('Failed to fetch Midnight tier encounters:', error.message);
       }
-    );
+    }
 
     // sporefall = Sporefall raid
-    const sporefallResponse = await axios.get(
-      'https://raider.io/api/v1/guilds/profile',
-      {
-        params: {
-          region: region,
-          realm: realmSlug,
-          name: guildName,
-          fields: 'raid_encounters:sporefall:mythic'
+    try {
+      const sporefallResponse = await axios.get(
+        'https://raider.io/api/v1/guilds/profile',
+        {
+          params: {
+            region: region,
+            realm: realmSlug,
+            name: guildName,
+            fields: 'raid_encounters:sporefall:mythic'
+          }
         }
+      );
+      sporefallEncounters = sporefallResponse.data?.raid_encounters || [];
+      if (!guildData) {
+        guildData = sporefallResponse.data;
       }
-    );
+    } catch (error: any) {
+      if (error.response?.status !== 404) {
+        logger.warn('Failed to fetch Sporefall tier encounters:', error.message);
+      }
+    }
+
+    // If neither API call succeeded, return null
+    if (!guildData) {
+      logger.warn(`Guild ${guildName} not found on Raider.IO`);
+      return null;
+    }
 
     // Combine encounters from both raids
-    const midnightEncounters = midnightResponse.data?.raid_encounters || [];
-    const sporefallEncounters = sporefallResponse.data?.raid_encounters || [];
     const allEncounters = [...midnightEncounters, ...sporefallEncounters];
 
     logger.info(`Fetched Raider.IO boss kills for ${guildName}`);
@@ -211,7 +237,7 @@ export async function fetchRaiderIOGuildBossKills() {
     
     // Return combined data
     return {
-      ...midnightResponse.data,
+      ...guildData,
       raid_encounters: allEncounters
     };
   } catch (error: any) {
