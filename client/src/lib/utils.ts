@@ -52,8 +52,17 @@ export function getWeekEnd(weekStart: string): string {
   return end.toISOString().split('T')[0];
 }
 
-// Midnight Season 1 Raid Bosses with role requirements
-export const MYTHIC_BOSSES = [
+// Raid Tiers
+export const RAID_TIERS = {
+  'midnight-s1': 'Midnight Season 1',
+  'undermine-s2': 'Liberation of Undermine',
+};
+
+export const DIFFICULTIES = ['normal', 'heroic', 'mythic'] as const;
+export type Difficulty = typeof DIFFICULTIES[number];
+
+// Midnight Season 1 Raid Bosses
+export const MIDNIGHT_S1_BOSSES = [
   { name: 'Chimaerus the Undreamt God', tanks: 2, healers: 5, dps: 13 },
   { name: 'Imperator Averzian', tanks: 2, healers: 5, dps: 13 },
   { name: 'Vorasius', tanks: 2, healers: 4, dps: 14 },
@@ -64,3 +73,23 @@ export const MYTHIC_BOSSES = [
   { name: 'Belo\'ren, Child of A\'lar', tanks: 2, healers: 5, dps: 13 },
   { name: 'Midnight Falls', tanks: 2, healers: 5, dps: 13 },
 ];
+
+// Liberation of Undermine Season 2 Raid Bosses
+export const UNDERMINE_S2_BOSSES = [
+  { name: 'Speaker Halthraz', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Mug\'Zee, Boss of Bosses', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Rik Reverb', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Sprocketmonger Lockenstock', tanks: 2, healers: 5, dps: 13 },
+  { name: 'The One-Price', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Miner-Lord Morleck', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Kah  eezol, Eye of the Swarm', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Ghuraq the Thrice-Sworn', tanks: 2, healers: 5, dps: 13 },
+];
+
+// Legacy export for backward compatibility
+export const MYTHIC_BOSSES = MIDNIGHT_S1_BOSSES;
+
+export const ALL_RAIDS = {
+  'midnight-s1': MIDNIGHT_S1_BOSSES,
+  'undermine-s2': UNDERMINE_S2_BOSSES,
+};

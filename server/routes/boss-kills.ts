@@ -36,24 +36,30 @@ router.get('/:id', (req, res) => {
 // Create a new boss kill
 router.post('/', (req, res) => {
   try {
-    const { boss_name, kill_date, screenshot_url } = req.body;
+    const { boss_name, kill_date, difficulty, raid_tier, screenshot_url } = req.body;
     
     if (!boss_name || !kill_date) {
       return res.status(400).json({ error: 'boss_name and kill_date are required' });
     }
     
     const stmt = db.prepare(`
-      INSERT INTO boss_kills (boss_name, kill_date, screenshot_url)
-      VALUES (?, ?, ?)
+      INSERT INTO boss_kills (boss_name, kill_date, difficulty, raid_tier, screenshot_url)
+      VALUES (?, ?, ?, ?, ?)
     `);
     
-    const result = stmt.run(boss_name, kill_date, screenshot_url || null);
+    const result = stmt.run(
+      boss_name, 
+      kill_date, 
+      difficulty || 'mythic',
+      raid_tier || 'midnight-s1',
+      screenshot_url || null
+    );
     
     const newKill = db.prepare('SELECT * FROM boss_kills WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(newKill);
   } catch (error: any) {
     if (error.code === 'SQLITE_CONSTRAINT') {
-      return res.status(409).json({ error: 'Boss kill already recorded' });
+      return res.status(409).json({ error: 'Boss kill already recorded for this difficulty and raid tier' });
     }
     logger.error('Error creating boss kill:', error);
     res.status(500).json({ error: 'Failed to create boss kill' });
@@ -64,15 +70,22 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { boss_name, kill_date, screenshot_url } = req.body;
+    const { boss_name, kill_date, difficulty, raid_tier, screenshot_url } = req.body;
     
     const stmt = db.prepare(`
       UPDATE boss_kills 
-      SET boss_name = ?, kill_date = ?, screenshot_url = ?
+      SET boss_name = ?, kill_date = ?, difficulty = ?, raid_tier = ?, screenshot_url = ?
       WHERE id = ?
     `);
     
-    const result = stmt.run(boss_name, kill_date, screenshot_url || null, id);
+    const result = stmt.run(
+      boss_name, 
+      kill_date, 
+      difficulty || 'mythic',
+      raid_tier || 'midnight-s1',
+      screenshot_url || null, 
+      id
+    );
     
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Boss kill not found' });
@@ -119,9 +132,21 @@ router.post('/sync', async (req, res) => {
       return res.json({ message: 'No boss kills found', count: 0 });
     }
 
+    // Define Season 2 boss names for raid tier detection
+    const SEASON_2_BOSSES = [
+      'Speaker Halthraz',
+      'Mug\'Zee, Boss of Bosses',
+      'Rik Reverb',
+      'Sprocketmonger Lockenstock',
+      'The One-Price',
+      'Miner-Lord Morleck',
+      'Kah  eezol, Eye of the Swarm',
+      'Ghuraq the Thrice-Sworn'
+    ];
+
     let synced = 0;
     const stmt = db.prepare(
-      'INSERT OR REPLACE INTO boss_kills (boss_name, kill_date) VALUES (?, ?)'
+      'INSERT OR REPLACE INTO boss_kills (boss_name, kill_date, difficulty, raid_tier) VALUES (?, ?, ?, ?)'
     );
 
     for (const encounter of encounters) {
@@ -129,11 +154,13 @@ router.post('/sync', async (req, res) => {
       if (encounter.defeatedAt) {
         const bossName = encounter.name;
         const killDate = new Date(encounter.defeatedAt).toISOString().split('T')[0];
+        const difficulty = encounter.difficulty?.toLowerCase() || 'mythic';
+        const raidTier = SEASON_2_BOSSES.includes(bossName) ? 'undermine-s2' : 'midnight-s1';
         
         try {
-          stmt.run(bossName, killDate);
+          stmt.run(bossName, killDate, difficulty, raidTier);
           synced++;
-          logger.info(`Synced boss kill: ${bossName} on ${killDate}`);
+          logger.info(`Synced boss kill: ${bossName} (${difficulty}) on ${killDate}`);
         } catch (error: any) {
           // Ignore duplicate entries
           if (!error.message?.includes('UNIQUE')) {

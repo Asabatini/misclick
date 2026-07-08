@@ -205,12 +205,28 @@ export function initializeDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS boss_kills (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      boss_name TEXT NOT NULL UNIQUE,
-      kill_date DATE NOT NULL,
+      boss_name TEXT NOT NULL,
+      kill_date DATE,
+      difficulty TEXT DEFAULT 'mythic',
+      raid_tier TEXT DEFAULT 'midnight-s1',
+      best_pull_percent INTEGER,
       screenshot_url TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(boss_name, difficulty, raid_tier)
     )
   `);
+  
+  // Add new columns if they don't exist (for existing databases)
+  try {
+    db.exec(`ALTER TABLE boss_kills ADD COLUMN difficulty TEXT DEFAULT 'mythic'`);
+  } catch (error) {
+    // Column already exists
+  }
+  try {
+    db.exec(`ALTER TABLE boss_kills ADD COLUMN raid_tier TEXT DEFAULT 'midnight-s1'`);
+  } catch (error) {
+    // Column already exists
+  }
 
   // Users table for authentication
   db.exec(`
