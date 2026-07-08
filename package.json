@@ -10,7 +10,7 @@
     "build": "npm run build:server && cd client && npm install && npm run build",
     "build:server": "tsc -p server/tsconfig.json",
     "build:client": "cd client && npm run build",
-    "start": "node dist/server/index.js",
+    "start": "node dist/index.js",
     "setup": "npm install && cd client && npm install"
   },
   "keywords": [
