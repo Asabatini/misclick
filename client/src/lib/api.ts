@@ -138,4 +138,23 @@ export const bossKillsAPI = {
   sync: () => api.post<{ message: string; count: number }>('/boss-kills/sync'),
 };
 
+// Streams API
+export interface Stream {
+  id: number;
+  platform: 'twitch' | 'youtube';
+  username: string;
+  display_name: string;
+  is_active: number;
+  created_at: string;
+}
+
+export const streamsAPI = {
+  getAll: () => api.get<Stream[]>('/streams'),
+  getActive: () => api.get<Stream[]>('/streams/active'),
+  create: (data: { platform: string; username: string; display_name: string }) => 
+    api.post<Stream>('/streams', data),
+  update: (id: number, data: Partial<Stream>) => api.put<Stream>(`/streams/${id}`, data),
+  delete: (id: number) => api.delete(`/streams/${id}`),
+};
+
 export default api;

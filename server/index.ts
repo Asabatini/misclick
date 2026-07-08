@@ -16,6 +16,7 @@ import absencesRouter from './routes/absences';
 import bossAssignmentsRouter from './routes/boss-assignments';
 import fightPreferencesRouter from './routes/fight-preferences';
 import bossKillsRouter from './routes/boss-kills';
+import streamsRouter from './routes/streams';
 
 // Load environment variables
 dotenv.config();
@@ -49,6 +50,7 @@ app.use('/api/absences', absencesRouter);
 app.use('/api/boss-assignments', bossAssignmentsRouter);
 app.use('/api/fight-preferences', fightPreferencesRouter);
 app.use('/api/boss-kills', bossKillsRouter);
+app.use('/api/streams', streamsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

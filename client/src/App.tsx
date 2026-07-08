@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home as HomeIcon, ClipboardList, Swords, MessageSquare, Users, LogOut, User, Shield } from 'lucide-react';
+import { Home as HomeIcon, ClipboardList, Swords, MessageSquare, Users, LogOut, User, Shield, Tv } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import Home from './pages/Home';
 import BossAssignments from './pages/BossAssignments';
@@ -8,6 +8,7 @@ import Absences from './pages/Absences';
 import FightPreferences from './pages/FightPreferences';
 import Login from './pages/Login';
 import UserManagement from './pages/UserManagement';
+import StreamManagement from './pages/StreamManagement';
 
 function App() {
   const location = useLocation();
@@ -41,6 +42,7 @@ function App() {
     { path: '/boss-assignments', icon: Swords, label: 'Boss Assignments', roles: ['Administrator', 'Officer', 'Raider', 'Member', 'Guest'] },
     { path: '/absences', icon: ClipboardList, label: 'Absences', roles: ['Administrator', 'Officer', 'Raider', 'Member'] },
     { path: '/preferences', icon: MessageSquare, label: 'Fight Preferences', roles: ['Administrator', 'Officer', 'Raider', 'Member', 'Guest'] },
+    { path: '/streams', icon: Tv, label: 'Streams', roles: ['Administrator'] },
     { path: '/users', icon: Users, label: 'User Management', roles: ['Administrator'] },
   ].filter(item => user && item.roles.includes(user.role));
 
@@ -121,6 +123,10 @@ function App() {
             element={canViewAllTabs ? <Absences /> : <Navigate to="/" replace />} 
           />
           <Route path="/preferences" element={<FightPreferences />} />
+          <Route 
+            path="/streams" 
+            element={canManageUsers ? <StreamManagement /> : <Navigate to="/" replace />} 
+          />
           <Route 
             path="/users" 
             element={canManageUsers ? <UserManagement /> : <Navigate to="/" replace />} 

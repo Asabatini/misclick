@@ -241,6 +241,19 @@ export function initializeDatabase() {
     )
   `);
 
+  // Streams table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS streams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL,
+      username TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(platform, username)
+    )
+  `);
+
   console.log('✅ Database initialized successfully');
   
   // Log current state for diagnostics

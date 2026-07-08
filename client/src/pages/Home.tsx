@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Calendar, Swords, RefreshCw } from 'lucide-react';
+import { Trophy, Calendar, Swords, RefreshCw, Tv } from 'lucide-react';
 import { MYTHIC_BOSSES } from '@/lib/utils';
-import { bossKillsAPI } from '@/lib/api';
+import { bossKillsAPI, streamsAPI, type Stream } from '@/lib/api';
 
 interface BossKill {
   id: number;
@@ -13,11 +13,13 @@ interface BossKill {
 
 export default function Home() {
   const [bossKills, setBossKills] = useState<BossKill[]>([]);
+  const [streams, setStreams] = useState<Stream[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadBossKills();
+    loadStreams();
   }, []);
 
   const loadBossKills = async () => {
@@ -29,6 +31,15 @@ export default function Home() {
       console.error('Failed to load boss kills', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStreams = async () => {
+    try {
+      const response = await streamsAPI.getActive();
+      setStreams(response.data);
+    } catch (err) {
+      console.error('Failed to load streams', err);
     }
   };
 
@@ -151,6 +162,69 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      {/* Live Streams Section */}
+      {streams.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Tv className="text-purple-500" size={24} />
+            Live Streams
+          </h2>
+          <div className={`grid gap-6 ${
+            streams.length === 1 
+              ? 'grid-cols-1' 
+              : streams.length === 2 
+              ? 'grid-cols-1 lg:grid-cols-2' 
+              : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+          }`}>
+            {streams.map((stream) => (
+              <div key={stream.id} className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="aspect-video bg-gray-900">
+                  {stream.platform === 'twitch' ? (
+                    <iframe
+                      src={`https://player.twitch.tv/?channel=${stream.username}&parent=${window.location.hostname}&autoplay=false`}
+                      height="100%"
+                      width="100%"
+                      allowFullScreen
+                      className="w-full h-full"
+                      title={`${stream.display_name} Twitch Stream`}
+                    />
+                  ) : (
+                    <iframe
+                      src={`https://www.youtube.com/embed/live_stream?channel=${stream.username}&autoplay=0`}
+                      height="100%"
+                      width="100%"
+                      allowFullScreen
+                      className="w-full h-full"
+                      title={`${stream.display_name} YouTube Stream`}
+                    />
+                  )}
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg">{stream.display_name}</h3>
+                      <p className="text-sm text-gray-400">
+                        {stream.platform === 'twitch' ? '🟣 Twitch' : '🔴 YouTube'}
+                      </p>
+                    </div>
+                    <a
+                      href={stream.platform === 'twitch' 
+                        ? `https://twitch.tv/${stream.username}` 
+                        : `https://youtube.com/@${stream.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-sm transition-colors"
+                    >
+                      Watch
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );
