@@ -167,7 +167,9 @@ export async function fetchRaiderIOGuildBossKills() {
   const guildSlug = encodeURIComponent(guildName);
 
   try {
-    // Fetch guild profile with raid encounters for tier-mn-1 (Midnight Season 1) on mythic difficulty
+    // Fetch guild profile with raid encounters for all current tiers
+    // tier-mn-1 = Midnight Season 1
+    // tier-mn-2 = Sporefall (if available)
     const response = await axios.get(
       'https://raider.io/api/v1/guilds/profile',
       {
@@ -175,12 +177,21 @@ export async function fetchRaiderIOGuildBossKills() {
           region: region,
           realm: realmSlug,
           name: guildName,
-          fields: 'raid_encounters:tier-mn-1:mythic'
+          fields: 'raid_encounters:tier-mn-1:mythic,raid_encounters:tier-mn-2:mythic'
         }
       }
     );
 
     logger.info(`Fetched Raider.IO boss kills for ${guildName}`);
+    
+    // Log the raid_encounters to see what we got
+    if (response.data?.raid_encounters) {
+      logger.info(`Found ${response.data.raid_encounters.length} boss encounters`);
+      response.data.raid_encounters.forEach((encounter: any) => {
+        logger.info(`  - ${encounter.name} (${encounter.difficulty}): ${encounter.defeatedAt ? 'Defeated' : 'Not defeated'}`);
+      });
+    }
+    
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {

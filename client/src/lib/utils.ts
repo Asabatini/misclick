@@ -63,4 +63,5 @@ export const MYTHIC_BOSSES = [
   { name: 'Crown of the Cosmos', tanks: 2, healers: 5, dps: 13 },
   { name: 'Belo\'ren, Child of A\'lar', tanks: 2, healers: 5, dps: 13 },
   { name: 'Midnight Falls', tanks: 2, healers: 5, dps: 13 },
+  { name: 'Rotmire', tanks: 2, healers: 5, dps: 13 },
 ];
