@@ -132,17 +132,8 @@ router.post('/sync', async (req, res) => {
       return res.json({ message: 'No boss kills found', count: 0 });
     }
 
-    // Define Season 2 boss names for raid tier detection
-    const SEASON_2_BOSSES = [
-      'Speaker Halthraz',
-      'Mug\'Zee, Boss of Bosses',
-      'Rik Reverb',
-      'Sprocketmonger Lockenstock',
-      'The One-Price',
-      'Miner-Lord Morleck',
-      'Kah  eezol, Eye of the Swarm',
-      'Ghuraq the Thrice-Sworn'
-    ];
+    // Define Sporefall boss name for raid tier detection
+    const SPOREFALL_BOSS = 'Rotmire';
 
     let synced = 0;
     const stmt = db.prepare(
@@ -155,7 +146,7 @@ router.post('/sync', async (req, res) => {
         const bossName = encounter.name;
         const killDate = new Date(encounter.defeatedAt).toISOString().split('T')[0];
         const difficulty = encounter.difficulty?.toLowerCase() || 'mythic';
-        const raidTier = SEASON_2_BOSSES.includes(bossName) ? 'undermine-s2' : 'midnight-s1';
+        const raidTier = bossName === SPOREFALL_BOSS ? 'sporefall' : 'midnight-s1';
         
         try {
           stmt.run(bossName, killDate, difficulty, raidTier);
