@@ -167,32 +167,53 @@ export async function fetchRaiderIOGuildBossKills() {
   const guildSlug = encodeURIComponent(guildName);
 
   try {
-    // Fetch guild profile with raid encounters for all current tiers
+    // Fetch guild profile with raid encounters for each tier separately
+    // (Raider.IO API only returns one tier's encounters when multiple are requested)
+    
     // tier-mn-1 = Midnight Season 1
-    // sporefall = Sporefall raid
-    const response = await axios.get(
+    const midnightResponse = await axios.get(
       'https://raider.io/api/v1/guilds/profile',
       {
         params: {
           region: region,
           realm: realmSlug,
           name: guildName,
-          fields: 'raid_encounters:tier-mn-1:mythic,raid_encounters:sporefall:mythic'
+          fields: 'raid_encounters:tier-mn-1:mythic'
         }
       }
     );
 
+    // sporefall = Sporefall raid
+    const sporefallResponse = await axios.get(
+      'https://raider.io/api/v1/guilds/profile',
+      {
+        params: {
+          region: region,
+          realm: realmSlug,
+          name: guildName,
+          fields: 'raid_encounters:sporefall:mythic'
+        }
+      }
+    );
+
+    // Combine encounters from both raids
+    const midnightEncounters = midnightResponse.data?.raid_encounters || [];
+    const sporefallEncounters = sporefallResponse.data?.raid_encounters || [];
+    const allEncounters = [...midnightEncounters, ...sporefallEncounters];
+
     logger.info(`Fetched Raider.IO boss kills for ${guildName}`);
+    logger.info(`Found ${allEncounters.length} total boss encounters (Midnight: ${midnightEncounters.length}, Sporefall: ${sporefallEncounters.length})`);
     
-    // Log the raid_encounters to see what we got
-    if (response.data?.raid_encounters) {
-      logger.info(`Found ${response.data.raid_encounters.length} boss encounters`);
-      response.data.raid_encounters.forEach((encounter: any) => {
-        logger.info(`  - ${encounter.name} (${encounter.difficulty || 'no-difficulty'}): ${encounter.defeatedAt ? 'Defeated' : 'Not defeated'}`);
-      });
-    }
+    // Log all encounters
+    allEncounters.forEach((encounter: any) => {
+      logger.info(`  - ${encounter.name} (${encounter.difficulty || 'no-difficulty'}): ${encounter.defeatedAt ? 'Defeated' : 'Not defeated'}`);
+    });
     
-    return response.data;
+    // Return combined data
+    return {
+      ...midnightResponse.data,
+      raid_encounters: allEncounters
+    };
   } catch (error: any) {
     if (error.response?.status === 404) {
       logger.warn(`Guild ${guildName} not found on Raider.IO`);
