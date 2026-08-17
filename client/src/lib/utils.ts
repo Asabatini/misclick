@@ -52,16 +52,17 @@ export function getWeekEnd(weekStart: string): string {
   return end.toISOString().split('T')[0];
 }
 
-// Midnight Season 1 Raid Bosses with role requirements
-export const MYTHIC_BOSSES = [
-  { name: 'Chimaerus the Undreamt God', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Imperator Averzian', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Vorasius', tanks: 2, healers: 4, dps: 14 },
-  { name: 'Fallen-King Salhadaar', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Vaelgor & Ezzorak', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Lightblinded Vanguard', tanks: 2, healers: 4, dps: 14 },
-  { name: 'Crown of the Cosmos', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Belo\'ren, Child of A\'lar', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Midnight Falls', tanks: 2, healers: 5, dps: 13 },
-  { name: 'Rotmire', tanks: 2, healers: 5, dps: 13 },
+// Midnight Season 2 — The Venomous Abyss raid bosses
+export const VENOMOUS_ABYSS_BOSSES = [
+  { name: "Nek'zali the Soulcoiler" },
+  { name: 'Entombed Sentinels' },
+  { name: 'Vashnik the Malignant' },
+  { name: 'The Lost Explorers' },
+  { name: 'Sszorak' },
+  { name: 'The Twin Fangs' },
+  { name: 'The Coiled Altar' },
+  { name: "Ula'tek" },
 ];
+
+// Legacy alias kept for any remaining references
+export const MYTHIC_BOSSES = VENOMOUS_ABYSS_BOSSES;
