@@ -298,6 +298,36 @@ export default function Calendar() {
   );
 }
 
+type Recurrence = 'none' | 'weekly' | 'biweekly';
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Expands a recurrence rule into individual ISO date strings. */
+function generateOccurrences(
+  startDate: string,
+  selectedDays: number[],
+  repeatWeeks: number,
+  interval: number
+): string[] {
+  if (selectedDays.length === 0) return [];
+  const dates: string[] = [];
+  const base = new Date(startDate + 'T12:00:00');
+  // Roll back to the Sunday of the start week
+  const weekOrigin = new Date(base);
+  weekOrigin.setDate(base.getDate() - base.getDay());
+
+  for (let w = 0; w < repeatWeeks; w += interval) {
+    for (let d = 0; d < 7; d++) {
+      if (!selectedDays.includes(d)) continue;
+      const date = new Date(weekOrigin);
+      date.setDate(weekOrigin.getDate() + w * 7 + d);
+      const iso = date.toISOString().split('T')[0];
+      if (iso >= startDate) dates.push(iso);
+    }
+  }
+  return dates.sort();
+}
+
 function EventForm({
   prefillDate,
   onClose,
@@ -313,30 +343,68 @@ function EventForm({
     end_date: prefillDate,
     description: '',
   });
+  const [recurrence, setRecurrence] = useState<Recurrence>('none');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [repeatWeeks, setRepeatWeeks] = useState(8);
+  const [submitting, setSubmitting] = useState(false);
+
+  const toggleDay = (d: number) =>
+    setSelectedDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+
+  const preview = recurrence !== 'none'
+    ? generateOccurrences(formData.start_date, selectedDays, repeatWeeks, recurrence === 'biweekly' ? 2 : 1)
+    : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.start_date || !formData.end_date) {
+    if (!formData.title || !formData.start_date) {
       alert('Please fill in all required fields');
       return;
     }
+    if (recurrence !== 'none' && selectedDays.length === 0) {
+      alert('Select at least one day for recurrence');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await eventsAPI.create({
-        title: formData.title,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        description: formData.description || undefined,
-      });
+      if (recurrence === 'none') {
+        await eventsAPI.create({
+          title: formData.title,
+          start_date: formData.start_date,
+          end_date: formData.end_date || formData.start_date,
+          description: formData.description || undefined,
+        });
+      } else {
+        const dates = generateOccurrences(
+          formData.start_date,
+          selectedDays,
+          repeatWeeks,
+          recurrence === 'biweekly' ? 2 : 1
+        );
+        await Promise.all(
+          dates.map(date =>
+            eventsAPI.create({
+              title: formData.title,
+              start_date: date,
+              end_date: date,
+              description: formData.description || undefined,
+            })
+          )
+        );
+      }
       onSave();
     } catch (err) {
       alert('Failed to create event');
       console.error(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="card max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="card max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold">Add Raid Event</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -355,28 +423,6 @@ function EventForm({
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Start Date *</label>
-              <input
-                type="date"
-                className="input"
-                value={formData.start_date}
-                onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="label">End Date *</label>
-              <input
-                type="date"
-                className="input"
-                value={formData.end_date}
-                onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                required
-              />
-            </div>
-          </div>
           <div>
             <label className="label">Description</label>
             <input
@@ -387,12 +433,126 @@ function EventForm({
               onChange={e => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          {/* Recurrence selector */}
+          <div>
+            <label className="label">Recurrence</label>
+            <div className="flex gap-2">
+              {(['none', 'weekly', 'biweekly'] as Recurrence[]).map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRecurrence(r)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
+                    recurrence === r
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {r === 'none' ? 'One-time' : r === 'weekly' ? 'Weekly' : 'Bi-weekly'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Non-recurring: show date range */}
+          {recurrence === 'none' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Start Date *</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.start_date}
+                  onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">End Date *</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.end_date}
+                  onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Recurring: start date + day picker + repeat weeks */}
+          {recurrence !== 'none' && (
+            <>
+              <div>
+                <label className="label">Starting From *</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.start_date}
+                  onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Repeat on Days *</label>
+                <div className="flex gap-1.5">
+                  {DAY_LABELS.map((label, d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => toggleDay(d)}
+                      className={`flex-1 py-2 rounded text-xs font-semibold transition-colors ${
+                        selectedDays.includes(d)
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="label">Repeat for {repeatWeeks} weeks</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={26}
+                  value={repeatWeeks}
+                  onChange={e => setRepeatWeeks(Number(e.target.value))}
+                  className="w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>1 wk</span>
+                  <span>26 wks (~6 months)</span>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {preview && preview.length > 0 && (
+                <div className="bg-gray-900/60 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-2">
+                    {preview.length} events will be created
+                  </p>
+                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                    {preview.map(d => (
+                      <span key={d} className="text-xs bg-blue-900/50 text-blue-300 rounded px-1.5 py-0.5">
+                        {new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary flex-1">
-              Create
+            <button type="submit" disabled={submitting} className="btn btn-primary flex-1 disabled:opacity-50">
+              {submitting ? 'Creating...' : preview ? `Create ${preview.length} Events` : 'Create'}
             </button>
           </div>
         </form>
