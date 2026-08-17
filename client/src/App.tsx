@@ -56,7 +56,7 @@ function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img
-                src=\"/Misclick%20logo.png\"
+                src="/Misclick%20logo.png"
                 alt="Misclick"
                 className="h-14 w-14 rounded-xl object-contain drop-shadow-lg"
                 onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
