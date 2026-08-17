@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { eventsAPI, absencesAPI, membersAPI } from '@/lib/api';
 import type { RaidEvent, Absence, Member } from '@/types';
@@ -14,7 +15,8 @@ function toISO(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-function isInRange(date: string, start: string, end: string): boolean {
+function isInRange(date: string, start: string | null | undefined, end: string | null | undefined): boolean {
+  if (!start || !end) return false;
   return date >= start.slice(0, 10) && date <= end.slice(0, 10);
 }
 
@@ -402,9 +404,15 @@ function EventForm({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="card max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto p-6"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold">Add Raid Event</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -557,7 +565,8 @@ function EventForm({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -599,9 +608,15 @@ function AbsenceForm({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="card max-w-md w-full mx-4">
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold">Report Absence</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -667,6 +682,7 @@ function AbsenceForm({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -59,7 +59,7 @@ function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-5">
               <img
-                src="/Misclick%20logo.png"
+                src="/Misclick%20logo%20Google.png"
                 alt="Misclick"
                 className="h-16 w-16 object-contain"
                 style={{ filter: 'drop-shadow(0 0 12px rgba(255,209,0,0.35))' }}
