@@ -27,6 +27,7 @@ export default function Calendar() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAbsenceForm, setShowAbsenceForm] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
   const [prefillDate, setPrefillDate] = useState('');
   const { canEditBossAssignments, canAddAbsencesPreferences } = useAuth();
 
@@ -83,6 +84,16 @@ export default function Calendar() {
     }
   };
 
+  const deleteEvent = async (id: number) => {
+    if (!confirm('Delete this event?')) return;
+    try {
+      await eventsAPI.delete(id);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
   const todayStr = toISO(today.getFullYear(), today.getMonth(), today.getDate());
@@ -110,15 +121,26 @@ export default function Calendar() {
           <h2 className="text-2xl font-bold mb-1">Calendar</h2>
           <p className="text-gray-400">Raid schedule and member absences</p>
         </div>
-        {canAddAbsencesPreferences && (
-          <button
-            onClick={() => { setPrefillDate(''); setShowAbsenceForm(true); }}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Report Absence
-          </button>
-        )}
+        <div className="flex gap-2">
+          {canEditBossAssignments && (
+            <button
+              onClick={() => { setPrefillDate(''); setShowEventForm(true); }}
+              className="btn btn-secondary flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Add Event
+            </button>
+          )}
+          {canAddAbsencesPreferences && (
+            <button
+              onClick={() => { setPrefillDate(''); setShowAbsenceForm(true); }}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Report Absence
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Legend */}
@@ -132,7 +154,7 @@ export default function Calendar() {
           <span className="text-gray-400">Absence</span>
         </div>
         {canAddAbsencesPreferences && (
-          <span className="text-gray-500 text-xs self-center ml-1">Click a day to report an absence</span>
+          <span className="text-gray-500 text-xs self-center ml-1">Click a day to pre-fill the date</span>
         )}
       </div>
 
@@ -212,10 +234,19 @@ export default function Calendar() {
                   {dayEvents.map(event => (
                     <div
                       key={event.id}
-                      className="text-xs bg-blue-600/80 text-white rounded px-1.5 py-0.5 truncate"
-                      title={event.title}
+                      className="flex items-center gap-1 text-xs bg-blue-600/80 text-white rounded px-1.5 py-0.5"
+                      title={event.description ?? event.title}
                     >
-                      {event.title}
+                      <span className="truncate flex-1">{event.title}</span>
+                      {canEditBossAssignments && (
+                        <button
+                          onClick={e => { e.stopPropagation(); deleteEvent(event.id); }}
+                          className="flex-shrink-0 hover:text-red-300 transition-colors"
+                          title="Remove event"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
                     </div>
                   ))}
 
@@ -254,6 +285,118 @@ export default function Calendar() {
           onSave={() => { setShowAbsenceForm(false); loadData(); }}
         />
       )}
+
+      {/* Event Form Modal */}
+      {showEventForm && (
+        <EventForm
+          prefillDate={prefillDate}
+          onClose={() => setShowEventForm(false)}
+          onSave={() => { setShowEventForm(false); loadData(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EventForm({
+  prefillDate,
+  onClose,
+  onSave,
+}: {
+  prefillDate: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: '',
+    start_date: prefillDate,
+    end_date: prefillDate,
+    description: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.start_date || !formData.end_date) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    try {
+      await eventsAPI.create({
+        title: formData.title,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        description: formData.description || undefined,
+      });
+      onSave();
+    } catch (err) {
+      alert('Failed to create event');
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="card max-w-md w-full mx-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold">Add Raid Event</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Title *</label>
+            <input
+              type="text"
+              className="input"
+              placeholder="e.g. Raid Night"
+              value={formData.title}
+              onChange={e => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Start Date *</label>
+              <input
+                type="date"
+                className="input"
+                value={formData.start_date}
+                onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="label">End Date *</label>
+              <input
+                type="date"
+                className="input"
+                value={formData.end_date}
+                onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="label">Description</label>
+            <input
+              type="text"
+              className="input"
+              placeholder="Optional"
+              value={formData.description}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary flex-1">
+              Create
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
