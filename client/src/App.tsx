@@ -49,12 +49,22 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 shadow-lg">
-        <div className="container mx-auto px-4 py-4">
+      <header className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-b border-yellow-900/40 shadow-xl overflow-hidden">
+        {/* subtle vignette strip */}
+        <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 to-transparent pointer-events-none" />
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-wow-gold">Misclick Guild Manager</h1>
-              <p className="text-gray-400">World of Warcraft Guild Management</p>
+            <div className="flex items-center gap-4">
+              <img
+                src=\"/Misclick%20logo.png\"
+                alt="Misclick"
+                className="h-14 w-14 rounded-xl object-contain drop-shadow-lg"
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-wow-gold drop-shadow">Misclick</h1>
+                <p className="text-sm text-gray-400 tracking-wide">Sargeras-US &bull; World of Warcraft</p>
+              </div>
             </div>
             {user && (
               <div className="flex items-center gap-4">

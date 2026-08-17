@@ -118,7 +118,7 @@ export default function Home() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold">Misclick Guild</h1>
-        <p className="text-xl text-gray-400">Sargeras-US &bull; Season 2 Midnight</p>
+        <p className="text-xl text-gray-400">Sargeras-US</p>
       </div>
 
       {/* Raid Progression Block */}
